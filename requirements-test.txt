@@ -1,0 +1,4 @@
+pytest
+pytest-asyncio
+homeassistant
+puresnmp>=2.0.0

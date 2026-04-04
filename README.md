@@ -94,7 +94,7 @@ Several MAC formats are accepted:
 | ------------------ | ----------------------------------------------------------- |
 | SNR                | Signal-to-noise ratio (dB)                                  |
 | Connection Type    | e.g. `802.11ac`, `802.11ax (Wi-Fi 6)`                       |
-| Channel Width      | e.g. `HT40`, `VHT80`, `HE80`                                |
+| Channel Width      | Channel width in MHz (e.g. `20`, `40`, `80`, `160`)         |
 | TX / RX Link Speed | Link rate (Mbps)                                            |
 | TX / RX Throughput | Bytes per second                                            |
 | TX / RX Retry Rate | Retry frames per second                                     |

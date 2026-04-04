@@ -14,6 +14,8 @@ CONF_SNMP_PORT: Final = "snmp_port"
 
 DEFAULT_SNMP_PORT: Final = 161
 CONF_MAC_HOSTNAME_FILE: Final = "mac_hostname_file"
+CONF_UPDATE_INTERVAL: Final = "update_interval"
+DEFAULT_UPDATE_INTERVAL: Final = 60
 
 # Aruba Networks Enterprise OID: 1.3.6.1.4.1.14823
 # Aruba Instant (AI-MIB) base: 1.3.6.1.4.1.14823.2.3.3.1

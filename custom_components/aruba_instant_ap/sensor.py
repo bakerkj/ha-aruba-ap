@@ -1527,7 +1527,6 @@ class ClientSensor(ArubaBaseEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{entry_id}_client_{_mac_slug(mac)}")},
             name=_client_display_name(client, mac),
-            connections={(device_registry.CONNECTION_NETWORK_MAC, mac)},
             via_device=self._radio_via_device(client),
         )
 

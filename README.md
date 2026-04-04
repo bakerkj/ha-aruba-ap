@@ -110,4 +110,4 @@ Several MAC formats are accepted:
 ## Requirements
 
 - Aruba Instant (AOS-8) cluster with SNMP v2c enabled
-- Home Assistant 2024.1 or later
+- Home Assistant 2026.4 or later

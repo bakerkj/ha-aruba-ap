@@ -7,6 +7,7 @@
   "issue_tracker": "https://github.com/bakerkj/ha-aruba-ap/issues",
   "integration_type": "device",
   "iot_class": "local_polling",
+  "homeassistant": "2026.4.0",
   "requirements": ["puresnmp>=2.0.0"],
   "version": "0.0.3"
 }

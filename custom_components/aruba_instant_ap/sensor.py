@@ -832,10 +832,10 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
         for mac in sorted(all_client_macs):
             entry: dict[str, Any] = {"mac": mac}
             hostname = cl_hostnames.get(mac)
-            if hostname and hostname.strip() and not hostname.startswith("0x"):
-                entry["name"] = hostname.strip()
-            elif mac_hostname_map.get(mac):
+            if mac_hostname_map.get(mac):
                 entry["name"] = mac_hostname_map[mac]
+            elif hostname and hostname.strip() and not hostname.startswith("0x"):
+                entry["name"] = hostname.strip()
             if ip := cl_ips.get(mac):
                 entry["ip"] = ip
             if bssid_raw_val := cl_bssids.get(mac):

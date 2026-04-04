@@ -1,0 +1,185 @@
+# Copyright (c) 2026 Kenneth Baker <bakerkj@umich.edu>
+# All rights reserved.
+
+"""Tests for MAC→hostname file loading and client name priority."""
+
+import json
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
+
+from custom_components.aruba_instant_ap.sensor import ArubaAPCoordinator
+
+
+def _make_coordinator(tmp_path: Path, filename: str = "") -> ArubaAPCoordinator:
+    """Build a coordinator with a minimal hass mock."""
+    hass = MagicMock()
+
+    async def _fake_executor(fn, *args):
+        return fn(*args)
+
+    hass.async_add_executor_job = _fake_executor
+    return ArubaAPCoordinator(
+        hass=hass,
+        host="192.168.1.1",
+        community="public",
+        snmp_port=161,
+        snmp_version="v2c",
+        update_seconds=60,
+        mac_hostname_file=filename,
+    )
+
+
+@pytest.mark.asyncio
+async def test_load_mac_hostname_file_basic(tmp_path):
+    mapping = {"aa:bb:cc:dd:ee:ff": "my-laptop", "11:22:33:44:55:66": "printer"}
+    f = tmp_path / "mapping.json"
+    f.write_text(json.dumps(mapping))
+
+    coord = _make_coordinator(tmp_path, str(f))
+    # Bypass executor by patching async_add_executor_job to run synchronously
+
+    result = await coord._load_mac_hostname_file()
+    assert result["aa:bb:cc:dd:ee:ff"] == "my-laptop"
+    assert result["11:22:33:44:55:66"] == "printer"
+
+
+@pytest.mark.asyncio
+async def test_load_mac_hostname_file_normalises_mac_formats(tmp_path):
+    """MACs in various separator styles should all normalise to colon form."""
+    mapping = {
+        "AABBCCDDEEFF": "device-no-sep",
+        "11-22-33-44-55-66": "device-dashes",
+        "CC.DD.EE.FF.00.11": "device-dots",
+    }
+    f = tmp_path / "mapping.json"
+    f.write_text(json.dumps(mapping))
+
+    coord = _make_coordinator(tmp_path, str(f))
+
+    result = await coord._load_mac_hostname_file()
+    assert result["aa:bb:cc:dd:ee:ff"] == "device-no-sep"
+    assert result["11:22:33:44:55:66"] == "device-dashes"
+    assert result["cc:dd:ee:ff:00:11"] == "device-dots"
+
+
+@pytest.mark.asyncio
+async def test_load_mac_hostname_file_missing_file(tmp_path):
+    coord = _make_coordinator(tmp_path, str(tmp_path / "nonexistent.json"))
+
+    result = await coord._load_mac_hostname_file()
+    assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_load_mac_hostname_file_empty_path():
+    coord = _make_coordinator(Path("/tmp"), "")
+    # No executor call should be made when path is empty
+    result = await coord._load_mac_hostname_file()
+    assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_load_mac_hostname_file_invalid_json(tmp_path):
+    f = tmp_path / "bad.json"
+    f.write_text("not json at all {{{")
+
+    coord = _make_coordinator(tmp_path, str(f))
+
+    result = await coord._load_mac_hostname_file()
+    assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_load_mac_hostname_file_not_a_dict(tmp_path):
+    f = tmp_path / "list.json"
+    f.write_text(json.dumps(["aa:bb:cc:dd:ee:ff"]))
+
+    coord = _make_coordinator(tmp_path, str(f))
+
+    result = await coord._load_mac_hostname_file()
+    assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_load_mac_hostname_file_skips_blank_values(tmp_path):
+    mapping = {"aa:bb:cc:dd:ee:ff": "valid", "11:22:33:44:55:66": "  "}
+    f = tmp_path / "mapping.json"
+    f.write_text(json.dumps(mapping))
+
+    coord = _make_coordinator(tmp_path, str(f))
+
+    result = await coord._load_mac_hostname_file()
+    assert "aa:bb:cc:dd:ee:ff" in result
+    assert "11:22:33:44:55:66" not in result
+
+
+# ── Client name priority ──────────────────────────────────────────────────────
+# The name resolution logic (mapping file > Aruba hostname > MAC) lives in
+# _fetch_data.  We test it directly via the logic extracted inline.
+
+
+def _resolve_client_name(
+    mac: str,
+    aruba_hostname: str | None,
+    mapping: dict[str, str],
+) -> str | None:
+    """Mirror of the name-resolution block in _fetch_data."""
+    hostname = aruba_hostname
+    if mapping.get(mac):
+        return mapping[mac]
+    if hostname and hostname.strip() and not hostname.startswith("0x"):
+        return hostname.strip()
+    return None
+
+
+def test_name_priority_mapping_wins_over_aruba():
+    result = _resolve_client_name(
+        "aa:bb:cc:dd:ee:ff",
+        aruba_hostname="aruba-name",
+        mapping={"aa:bb:cc:dd:ee:ff": "mapping-name"},
+    )
+    assert result == "mapping-name"
+
+
+def test_name_priority_aruba_used_when_no_mapping():
+    result = _resolve_client_name(
+        "aa:bb:cc:dd:ee:ff",
+        aruba_hostname="aruba-name",
+        mapping={},
+    )
+    assert result == "aruba-name"
+
+
+def test_name_priority_none_when_both_absent():
+    result = _resolve_client_name("aa:bb:cc:dd:ee:ff", aruba_hostname=None, mapping={})
+    assert result is None
+
+
+def test_name_priority_aruba_hex_string_ignored():
+    """Aruba reports raw hex (0x...) when no hostname is known — should be skipped."""
+    result = _resolve_client_name(
+        "aa:bb:cc:dd:ee:ff",
+        aruba_hostname="0xaabbccddeeff",
+        mapping={},
+    )
+    assert result is None
+
+
+def test_name_priority_aruba_whitespace_stripped():
+    result = _resolve_client_name(
+        "aa:bb:cc:dd:ee:ff",
+        aruba_hostname="  trimmed  ",
+        mapping={},
+    )
+    assert result == "trimmed"
+
+
+def test_name_priority_mapping_wins_even_when_aruba_is_hex():
+    result = _resolve_client_name(
+        "aa:bb:cc:dd:ee:ff",
+        aruba_hostname="0xaabbccddeeff",
+        mapping={"aa:bb:cc:dd:ee:ff": "from-mapping"},
+    )
+    assert result == "from-mapping"

@@ -4,6 +4,7 @@
 """Tests for MAC→hostname file loading and client name priority."""
 
 import json
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,28 +12,23 @@ import pytest
 from custom_components.aruba_instant_ap.sensor import ArubaAPCoordinator
 
 
-class _FileLoaderStub:
-    """Minimal stub for testing _load_mac_hostname_file.
+def _make_coordinator(tmp_path: Path, filename: str = "") -> ArubaAPCoordinator:
+    """Build a coordinator with a minimal hass mock."""
+    hass = MagicMock()
 
-    Avoids instantiating ArubaAPCoordinator (and its DataUpdateCoordinator
-    parent) which requires a real HA frame context in newer HA versions.
-    _load_mac_hostname_file only uses self.hass and self.mac_hostname_file.
-    """
+    async def _fake_executor(fn, *args):
+        return fn(*args)
 
-    def __init__(self, filename: str) -> None:
-        self.mac_hostname_file = filename
-        self.hass = MagicMock()
-
-        async def _fake_executor(fn, *args):
-            return fn(*args)
-
-        self.hass.async_add_executor_job = _fake_executor
-
-    _load_mac_hostname_file = ArubaAPCoordinator._load_mac_hostname_file
-
-
-def _make_loader(filename: str = "") -> _FileLoaderStub:
-    return _FileLoaderStub(filename)
+    hass.async_add_executor_job = _fake_executor
+    return ArubaAPCoordinator(
+        hass=hass,
+        host="192.168.1.1",
+        community="public",
+        snmp_port=161,
+        snmp_version="v2c",
+        update_seconds=60,
+        mac_hostname_file=filename,
+    )
 
 
 @pytest.mark.asyncio
@@ -41,7 +37,7 @@ async def test_load_mac_hostname_file_basic(tmp_path):
     f = tmp_path / "mapping.json"
     f.write_text(json.dumps(mapping))
 
-    coord = _make_loader(str(f))
+    coord = _make_coordinator(tmp_path, str(f))
     result = await coord._load_mac_hostname_file()
     assert result["aa:bb:cc:dd:ee:ff"] == "my-laptop"
     assert result["11:22:33:44:55:66"] == "printer"
@@ -58,7 +54,7 @@ async def test_load_mac_hostname_file_normalises_mac_formats(tmp_path):
     f = tmp_path / "mapping.json"
     f.write_text(json.dumps(mapping))
 
-    coord = _make_loader(str(f))
+    coord = _make_coordinator(tmp_path, str(f))
 
     result = await coord._load_mac_hostname_file()
     assert result["aa:bb:cc:dd:ee:ff"] == "device-no-sep"
@@ -68,15 +64,15 @@ async def test_load_mac_hostname_file_normalises_mac_formats(tmp_path):
 
 @pytest.mark.asyncio
 async def test_load_mac_hostname_file_missing_file(tmp_path):
-    coord = _make_loader(str(tmp_path / "nonexistent.json"))
+    coord = _make_coordinator(tmp_path, str(tmp_path / "nonexistent.json"))
 
     result = await coord._load_mac_hostname_file()
     assert result == {}
 
 
 @pytest.mark.asyncio
-async def test_load_mac_hostname_file_empty_path():
-    coord = _make_loader("")
+async def test_load_mac_hostname_file_empty_path(tmp_path):
+    coord = _make_coordinator(tmp_path, "")
     # No executor call should be made when path is empty
     result = await coord._load_mac_hostname_file()
     assert result == {}
@@ -87,7 +83,7 @@ async def test_load_mac_hostname_file_invalid_json(tmp_path):
     f = tmp_path / "bad.json"
     f.write_text("not json at all {{{")
 
-    coord = _make_loader(str(f))
+    coord = _make_coordinator(tmp_path, str(f))
 
     result = await coord._load_mac_hostname_file()
     assert result == {}
@@ -98,7 +94,7 @@ async def test_load_mac_hostname_file_not_a_dict(tmp_path):
     f = tmp_path / "list.json"
     f.write_text(json.dumps(["aa:bb:cc:dd:ee:ff"]))
 
-    coord = _make_loader(str(f))
+    coord = _make_coordinator(tmp_path, str(f))
 
     result = await coord._load_mac_hostname_file()
     assert result == {}
@@ -110,7 +106,7 @@ async def test_load_mac_hostname_file_skips_blank_values(tmp_path):
     f = tmp_path / "mapping.json"
     f.write_text(json.dumps(mapping))
 
-    coord = _make_loader(str(f))
+    coord = _make_coordinator(tmp_path, str(f))
 
     result = await coord._load_mac_hostname_file()
     assert "aa:bb:cc:dd:ee:ff" in result

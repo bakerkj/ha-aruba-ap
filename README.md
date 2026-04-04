@@ -1,4 +1,4 @@
-# Aruba Instant AP — Home Assistant Integration
+4# Aruba Instant AP — Home Assistant Integration
 
 Monitors an Aruba Instant AP cluster via SNMP and exposes per-AP, per-radio, and
 per-client sensors in Home Assistant.
@@ -35,17 +35,12 @@ Aruba Instant AP**.
 | Host              | IP address or hostname of the virtual controller                      |
 | SNMP Community    | SNMP v2c community string (default: `public`)                         |
 | SNMP Port         | UDP port (default: `161`)                                             |
+| SNMP Version      | `v2c` (default) or `v1`                                               |
 | Update interval   | Poll interval in seconds (default: `60`, minimum: `10`)               |
 | MAC hostname file | Path to a JSON file mapping MAC addresses to display names (optional) |
 
-## Options
-
-Advanced options can be changed after setup via **Settings → Devices & Services
-→ Aruba Instant AP → Configure**.
-
-| Option       | Description             |
-| ------------ | ----------------------- |
-| SNMP version | `v2c` (default) or `v1` |
+All settings can be changed later via **Settings → Devices & Services → Aruba
+Instant AP → Reconfigure**.
 
 ### MAC hostname file
 

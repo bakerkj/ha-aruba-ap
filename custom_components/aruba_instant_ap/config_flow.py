@@ -10,8 +10,6 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
@@ -36,6 +34,7 @@ STEP_USER_SCHEMA = vol.Schema(
         vol.Required(CONF_SNMP_PORT, default=DEFAULT_SNMP_PORT): vol.All(
             vol.Coerce(int), vol.Range(min=1, max=65535)
         ),
+        vol.Required("snmp_version", default="v2c"): vol.In(["v2c", "v1"]),
         vol.Required(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): vol.All(
             vol.Coerce(int), vol.Range(min=10)
         ),
@@ -76,7 +75,7 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                     title=user_input[CONF_HOST],
                     data=_connection_data(user_input),
                     options={
-                        "snmp_version": "v2c",
+                        "snmp_version": user_input.get("snmp_version", "v2c"),
                         CONF_UPDATE_INTERVAL: user_input.get(
                             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
                         ),
@@ -95,7 +94,7 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Allow updating host/community/port without re-adding."""
+        """Allow updating all settings without re-adding."""
         errors: dict[str, str] = {}
         entry = self._get_reconfigure_entry()
 
@@ -118,6 +117,7 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                     title=user_input[CONF_HOST],
                     data_updates=_connection_data(user_input),
                     options_updates={
+                        "snmp_version": user_input.get("snmp_version", "v2c"),
                         CONF_UPDATE_INTERVAL: user_input.get(
                             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
                         ),
@@ -133,12 +133,17 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                 {
                     vol.Required(CONF_HOST, default=entry.data.get(CONF_HOST, "")): str,
                     vol.Required(
-                        CONF_COMMUNITY, default=entry.data.get(CONF_COMMUNITY, "public")
+                        CONF_COMMUNITY,
+                        default=entry.data.get(CONF_COMMUNITY, "public"),
                     ): str,
                     vol.Required(
                         CONF_SNMP_PORT,
                         default=entry.data.get(CONF_SNMP_PORT, DEFAULT_SNMP_PORT),
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
+                    vol.Required(
+                        "snmp_version",
+                        default=entry.options.get("snmp_version", "v2c"),
+                    ): vol.In(["v2c", "v1"]),
                     vol.Required(
                         CONF_UPDATE_INTERVAL,
                         default=entry.options.get(
@@ -152,37 +157,6 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                 }
             ),
             errors=errors,
-        )
-
-    @classmethod
-    @callback
-    def async_get_options_flow(cls, config_entry: ConfigEntry):
-        """Return options flow handler."""
-        return ArubaInstantAPOptionsFlow()
-
-
-class ArubaInstantAPOptionsFlow(config_entries.OptionsFlow):
-    """Options flow for Aruba Instant AP."""
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Manage options."""
-        current = self.config_entry.options
-
-        if user_input is not None:
-            return self.async_create_entry(title="", data={**current, **user_input})
-
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        "snmp_version",
-                        default=current.get("snmp_version", "v2c"),
-                    ): vol.In({"v2c": "v2c", "v1": "v1"}),
-                }
-            ),
         )
 
 

@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Aruba Instant AP",
+        "description": "Enter the SNMP connection details for your Aruba Instant AP or virtual controller.",
+        "data": {
+          "host": "IP Address or Hostname",
+          "community": "SNMP Community String",
+          "snmp_port": "SNMP Port"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Aruba Instant AP",
+        "data": {
+          "host": "IP Address or Hostname",
+          "community": "SNMP Community String",
+          "snmp_port": "SNMP Port"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect. Check the IP address, community string, and that SNMP is enabled on the AP.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This AP is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Aruba Instant AP Options",
+        "data": {
+          "update_interval": "Poll interval (seconds)",
+          "snmp_version": "SNMP version"
+        }
+      }
+    }
+  }
+}

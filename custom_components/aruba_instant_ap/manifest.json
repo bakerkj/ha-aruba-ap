@@ -1,0 +1,11 @@
+{
+  "domain": "aruba_instant_ap",
+  "name": "Aruba Instant AP",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/bakerkj/ha-aruba-ap",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "requirements": ["puresnmp>=2.0.0"],
+  "version": "0.0.1"
+}

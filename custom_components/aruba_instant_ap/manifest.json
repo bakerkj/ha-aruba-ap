@@ -4,8 +4,9 @@
   "codeowners": [],
   "config_flow": true,
   "documentation": "https://github.com/bakerkj/ha-aruba-ap",
+  "issue_tracker": "https://github.com/bakerkj/ha-aruba-ap/issues",
   "integration_type": "device",
   "iot_class": "local_polling",
   "requirements": ["puresnmp>=2.0.0"],
-  "version": "0.0.2"
+  "version": "0.0.3"
 }

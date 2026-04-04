@@ -38,7 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     community = entry.data[CONF_COMMUNITY]
     snmp_port = entry.data.get(CONF_SNMP_PORT, DEFAULT_SNMP_PORT)
     snmp_version = entry.options.get("snmp_version", "v2c")
-    update_seconds = max(10, entry.options.get("update_interval", 30))
+    update_seconds = max(10, entry.options.get("update_interval", 60))
     mac_hostname_file = entry.options.get(CONF_MAC_HOSTNAME_FILE, "")
 
     coordinator = ArubaAPCoordinator(

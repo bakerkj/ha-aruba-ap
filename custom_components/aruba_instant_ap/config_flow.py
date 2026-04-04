@@ -73,7 +73,7 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                     data=_connection_data(user_input),
                     options={
                         "snmp_version": "v2c",
-                        "update_interval": 30,
+                        "update_interval": 60,
                         CONF_MAC_HOSTNAME_FILE: user_input.get(
                             CONF_MAC_HOSTNAME_FILE, ""
                         ),

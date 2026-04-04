@@ -5,21 +5,14 @@
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
 
-import pytest
+from homeassistant.core import HomeAssistant
 
 from custom_components.aruba_instant_ap.sensor import ArubaAPCoordinator
 
 
-def _make_coordinator(tmp_path: Path, filename: str = "") -> ArubaAPCoordinator:
-    """Build a coordinator with a minimal hass mock."""
-    hass = MagicMock()
-
-    async def _fake_executor(fn, *args):
-        return fn(*args)
-
-    hass.async_add_executor_job = _fake_executor
+def _make_coordinator(hass: HomeAssistant, filename: str = "") -> ArubaAPCoordinator:
+    """Build a coordinator using a real HA instance (required for frame context)."""
     return ArubaAPCoordinator(
         hass=hass,
         host="192.168.1.1",
@@ -31,20 +24,20 @@ def _make_coordinator(tmp_path: Path, filename: str = "") -> ArubaAPCoordinator:
     )
 
 
-@pytest.mark.asyncio
-async def test_load_mac_hostname_file_basic(tmp_path):
+async def test_load_mac_hostname_file_basic(hass: HomeAssistant, tmp_path: Path):
     mapping = {"aa:bb:cc:dd:ee:ff": "my-laptop", "11:22:33:44:55:66": "printer"}
     f = tmp_path / "mapping.json"
     f.write_text(json.dumps(mapping))
 
-    coord = _make_coordinator(tmp_path, str(f))
+    coord = _make_coordinator(hass, str(f))
     result = await coord._load_mac_hostname_file()
     assert result["aa:bb:cc:dd:ee:ff"] == "my-laptop"
     assert result["11:22:33:44:55:66"] == "printer"
 
 
-@pytest.mark.asyncio
-async def test_load_mac_hostname_file_normalises_mac_formats(tmp_path):
+async def test_load_mac_hostname_file_normalises_mac_formats(
+    hass: HomeAssistant, tmp_path: Path
+):
     """MACs in various separator styles should all normalise to colon form."""
     mapping = {
         "AABBCCDDEEFF": "device-no-sep",
@@ -54,60 +47,51 @@ async def test_load_mac_hostname_file_normalises_mac_formats(tmp_path):
     f = tmp_path / "mapping.json"
     f.write_text(json.dumps(mapping))
 
-    coord = _make_coordinator(tmp_path, str(f))
-
+    coord = _make_coordinator(hass, str(f))
     result = await coord._load_mac_hostname_file()
     assert result["aa:bb:cc:dd:ee:ff"] == "device-no-sep"
     assert result["11:22:33:44:55:66"] == "device-dashes"
     assert result["cc:dd:ee:ff:00:11"] == "device-dots"
 
 
-@pytest.mark.asyncio
-async def test_load_mac_hostname_file_missing_file(tmp_path):
-    coord = _make_coordinator(tmp_path, str(tmp_path / "nonexistent.json"))
-
+async def test_load_mac_hostname_file_missing_file(hass: HomeAssistant, tmp_path: Path):
+    coord = _make_coordinator(hass, str(tmp_path / "nonexistent.json"))
     result = await coord._load_mac_hostname_file()
     assert result == {}
 
 
-@pytest.mark.asyncio
-async def test_load_mac_hostname_file_empty_path(tmp_path):
-    coord = _make_coordinator(tmp_path, "")
-    # No executor call should be made when path is empty
+async def test_load_mac_hostname_file_empty_path(hass: HomeAssistant):
+    coord = _make_coordinator(hass, "")
     result = await coord._load_mac_hostname_file()
     assert result == {}
 
 
-@pytest.mark.asyncio
-async def test_load_mac_hostname_file_invalid_json(tmp_path):
+async def test_load_mac_hostname_file_invalid_json(hass: HomeAssistant, tmp_path: Path):
     f = tmp_path / "bad.json"
     f.write_text("not json at all {{{")
 
-    coord = _make_coordinator(tmp_path, str(f))
-
+    coord = _make_coordinator(hass, str(f))
     result = await coord._load_mac_hostname_file()
     assert result == {}
 
 
-@pytest.mark.asyncio
-async def test_load_mac_hostname_file_not_a_dict(tmp_path):
+async def test_load_mac_hostname_file_not_a_dict(hass: HomeAssistant, tmp_path: Path):
     f = tmp_path / "list.json"
     f.write_text(json.dumps(["aa:bb:cc:dd:ee:ff"]))
 
-    coord = _make_coordinator(tmp_path, str(f))
-
+    coord = _make_coordinator(hass, str(f))
     result = await coord._load_mac_hostname_file()
     assert result == {}
 
 
-@pytest.mark.asyncio
-async def test_load_mac_hostname_file_skips_blank_values(tmp_path):
+async def test_load_mac_hostname_file_skips_blank_values(
+    hass: HomeAssistant, tmp_path: Path
+):
     mapping = {"aa:bb:cc:dd:ee:ff": "valid", "11:22:33:44:55:66": "  "}
     f = tmp_path / "mapping.json"
     f.write_text(json.dumps(mapping))
 
-    coord = _make_coordinator(tmp_path, str(f))
-
+    coord = _make_coordinator(hass, str(f))
     result = await coord._load_mac_hostname_file()
     assert "aa:bb:cc:dd:ee:ff" in result
     assert "11:22:33:44:55:66" not in result

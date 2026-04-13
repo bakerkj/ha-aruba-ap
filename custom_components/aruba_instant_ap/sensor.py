@@ -181,6 +181,8 @@ class ArubaClusterData:
     aps: dict[str, PerAPData] = field(default_factory=dict)  # mac → PerAPData
     clients: list[dict[str, Any]] = field(default_factory=list)
     firmware: str | None = None  # cluster firmware
+    total_clients: int = 0
+    clients_by_radio_type: dict[str, int] = field(default_factory=dict)
 
 
 # =============================================================================
@@ -905,7 +907,24 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
             clients.append(entry)
 
         self._prev_client_counters = new_client_counters
-        return ArubaClusterData(aps=aps, clients=clients, firmware=cluster_firmware)
+
+        cluster_total_clients = sum(ap.total_clients for ap in aps.values())
+        cluster_clients_by_radio_type: dict[str, int] = {}
+        for ap in aps.values():
+            for radio in ap.radios.values():
+                if radio.radio_type:
+                    cluster_clients_by_radio_type[radio.radio_type] = (
+                        cluster_clients_by_radio_type.get(radio.radio_type, 0)
+                        + radio.clients
+                    )
+
+        return ArubaClusterData(
+            aps=aps,
+            clients=clients,
+            firmware=cluster_firmware,
+            total_clients=cluster_total_clients,
+            clients_by_radio_type=cluster_clients_by_radio_type,
+        )
 
 
 # =============================================================================
@@ -1286,6 +1305,18 @@ def _ap_memory_usage(ap: PerAPData) -> int | None:
     return round(100 * used / ap.mem_total_bytes)
 
 
+@dataclass(frozen=True)
+class ClusterSensorDescription:
+    key: str
+    name: str
+    value_fn: Callable[[ArubaClusterData], Any]
+    unit: str | None = None
+    device_class: SensorDeviceClass | None = None
+    state_class: SensorStateClass | None = None
+    icon: str = "mdi:access-point-network"
+    enabled_default: bool = True
+
+
 AP_SENSOR_DESCRIPTIONS: tuple[APSensorDescription, ...] = (
     APSensorDescription(
         "ap_status",
@@ -1429,6 +1460,43 @@ class APSensor(ArubaAPBaseEntity):
             return {}
         ap = self._ap_data()
         return self._description.extra_attrs_fn(ap) if ap else {}
+
+
+# =============================================================================
+# Cluster sensors  (one device for the whole cluster)
+# =============================================================================
+
+
+class ClusterSensor(ArubaBaseEntity):
+    """Sensor attached to the cluster-level virtual device."""
+
+    def __init__(
+        self,
+        coordinator: ArubaAPCoordinator,
+        entry_id: str,
+        description: ClusterSensorDescription,
+    ) -> None:
+        super().__init__(coordinator)
+        self._description = description
+        self._attr_name = description.name
+        self._attr_unique_id = f"{entry_id}_cluster_{description.key}"
+        self._attr_native_unit_of_measurement = description.unit
+        self._attr_device_class = description.device_class
+        self._attr_state_class = description.state_class
+        self._attr_icon = description.icon
+        self._attr_entity_registry_enabled_default = description.enabled_default
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{entry_id}_cluster")},
+            name="Aruba Cluster",
+            manufacturer="Aruba Networks",
+            sw_version=coordinator.data.firmware if coordinator.data else None,
+        )
+
+    @property
+    def native_value(self) -> Any:
+        if not self.coordinator.data:
+            return None
+        return self._description.value_fn(self.coordinator.data)
 
 
 # =============================================================================
@@ -1649,6 +1717,57 @@ async def async_setup_entry(
     known_aps: set[str] = set()  # AP MACs already registered
     known_radios: set[tuple[str, int]] = set()  # (mac, radio_idx) already registered
     known_client_macs: set[str] = set()
+    known_radio_types: set[str] = set()
+
+    # Cluster-level total-clients sensor (always present)
+    async_add_entities(
+        [
+            ClusterSensor(
+                coordinator,
+                entry_id,
+                ClusterSensorDescription(
+                    "total_clients",
+                    "Total Clients",
+                    lambda data: data.total_clients,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    icon="mdi:account-multiple",
+                ),
+            )
+        ]
+    )
+
+    def _radio_type_fn(rt: str) -> Callable[[ArubaClusterData], int]:
+        return lambda data: data.clients_by_radio_type.get(rt, 0)
+
+    @callback
+    def _add_cluster_radio_type_sensors() -> None:
+        if not coordinator.data:
+            return
+        new_entities: list[SensorEntity] = []
+        for radio_type in coordinator.data.clients_by_radio_type:
+            if radio_type not in known_radio_types:
+                known_radio_types.add(radio_type)
+                rt_key = radio_type.lower().replace(" ", "_").replace(".", "")
+                new_entities.append(
+                    ClusterSensor(
+                        coordinator,
+                        entry_id,
+                        ClusterSensorDescription(
+                            f"clients_{rt_key}",
+                            f"{radio_type} Clients",
+                            _radio_type_fn(radio_type),
+                            state_class=SensorStateClass.MEASUREMENT,
+                            icon="mdi:account-multiple",
+                        ),
+                    )
+                )
+        if new_entities:
+            async_add_entities(new_entities)
+
+    _add_cluster_radio_type_sensors()
+    entry.async_on_unload(
+        coordinator.async_add_listener(_add_cluster_radio_type_sensors)
+    )
 
     @callback
     def _add_new_aps() -> None:

@@ -6,8 +6,6 @@ dependencies = ["puresnmp>=2.0.0"]
 
 [dependency-groups]
 test = [
-  "pytest",
-  "pytest-asyncio",
   "pytest-homeassistant-custom-component",
 ]
 

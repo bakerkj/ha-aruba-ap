@@ -353,6 +353,7 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
         snmp_version: str,
         update_seconds: int,
         mac_hostname_file: str = "",
+        clients_mapped_only: bool = False,
     ) -> None:
         super().__init__(
             hass,
@@ -365,6 +366,8 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
         self.snmp_port = snmp_port
         self.snmp_version = snmp_version
         self.mac_hostname_file = mac_hostname_file
+        self.clients_mapped_only = clients_mapped_only
+        self._mac_hostname_map: dict[str, str] = {}
         # (mac, radio_idx) → (tx_bytes, rx_bytes,
         #                      tx_total_f, tx_mgmt_f, tx_data_f,
         #                      rx_total_f, rx_data_f, rx_mgmt_f,
@@ -765,6 +768,7 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
 
         # ── MAC→hostname file ──────────────────────────────────────────────
         mac_hostname_map = await self._load_mac_hostname_file()
+        self._mac_hostname_map = mac_hostname_map
 
         # ── BSS table: build BSSID → SSID map ─────────────────────────────
         # BSS table indexed by (AP_MAC, bss_idx), same structure as radio table
@@ -1679,6 +1683,8 @@ async def async_setup_entry(
         if not coordinator.data:
             return
         current_macs = {c["mac"] for c in coordinator.data.clients}
+        if coordinator.clients_mapped_only:
+            current_macs = current_macs & coordinator._mac_hostname_map.keys()
         new_macs = current_macs - known_client_macs
         if not new_macs:
             return

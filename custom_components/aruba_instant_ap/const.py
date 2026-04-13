@@ -14,6 +14,7 @@ CONF_SNMP_PORT: Final = "snmp_port"
 
 DEFAULT_SNMP_PORT: Final = 161
 CONF_MAC_HOSTNAME_FILE: Final = "mac_hostname_file"
+CONF_CLIENTS_MAPPED_ONLY: Final = "clients_mapped_only"
 CONF_UPDATE_INTERVAL: Final = "update_interval"
 DEFAULT_UPDATE_INTERVAL: Final = 60
 

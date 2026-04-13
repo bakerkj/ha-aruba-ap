@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
+    CONF_CLIENTS_MAPPED_ONLY,
     CONF_COMMUNITY,
     CONF_HOST,
     CONF_MAC_HOSTNAME_FILE,
@@ -44,6 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         10, entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
     )
     mac_hostname_file = entry.options.get(CONF_MAC_HOSTNAME_FILE, "")
+    clients_mapped_only = entry.options.get(CONF_CLIENTS_MAPPED_ONLY, False)
 
     coordinator = ArubaAPCoordinator(
         hass,
@@ -53,6 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         snmp_version,
         update_seconds,
         mac_hostname_file,
+        clients_mapped_only,
     )
 
     hass.data[DOMAIN][entry.entry_id] = coordinator

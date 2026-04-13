@@ -919,6 +919,7 @@ class RadioSensorDescription:
     state_class: SensorStateClass | None = None
     icon: str = "mdi:wifi"
     icon_fn: Callable[[Any], str] | None = None
+    enabled_default: bool = True
 
 
 RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
@@ -989,6 +990,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         unit="frames/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transfer-up",
+        enabled_default=False,
     ),
     RadioSensorDescription(
         "tx_mgmt_frame_rate",
@@ -997,6 +999,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         unit="frames/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transfer-up",
+        enabled_default=False,
     ),
     RadioSensorDescription(
         "tx_data_frame_rate",
@@ -1005,6 +1008,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         unit="frames/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transfer-up",
+        enabled_default=False,
     ),
     RadioSensorDescription(
         "rx_total_frame_rate",
@@ -1013,6 +1017,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         unit="frames/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transfer-down",
+        enabled_default=False,
     ),
     RadioSensorDescription(
         "rx_data_frame_rate",
@@ -1021,6 +1026,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         unit="frames/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transfer-down",
+        enabled_default=False,
     ),
     RadioSensorDescription(
         "rx_mgmt_frame_rate",
@@ -1029,6 +1035,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         unit="frames/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transfer-down",
+        enabled_default=False,
     ),
     RadioSensorDescription(
         "tx_dropped_rate",
@@ -1037,6 +1044,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         unit="frames/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:close-network",
+        enabled_default=False,
     ),
     RadioSensorDescription(
         "rx_bad_rate",
@@ -1045,6 +1053,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         unit="frames/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:alert-circle-outline",
+        enabled_default=False,
     ),
     RadioSensorDescription(
         "phy_event_rate",
@@ -1053,6 +1062,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         unit="events/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:wifi-alert",
+        enabled_default=False,
     ),
     RadioSensorDescription(
         "utilization_64",
@@ -1061,6 +1071,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         unit=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:percent",
+        enabled_default=False,
     ),
 )
 
@@ -1074,6 +1085,7 @@ class ClientSensorDescription:
     device_class: SensorDeviceClass | None = None
     state_class: SensorStateClass | None = None
     icon: str = "mdi:devices"
+    enabled_default: bool = True
 
 
 CLIENT_SENSOR_DESCRIPTIONS: tuple[ClientSensorDescription, ...] = (
@@ -1114,6 +1126,7 @@ CLIENT_SENSOR_DESCRIPTIONS: tuple[ClientSensorDescription, ...] = (
         unit="MHz",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:arrow-expand-horizontal",
+        enabled_default=False,
     ),
     ClientSensorDescription(
         "speed",
@@ -1130,26 +1143,38 @@ CLIENT_SENSOR_DESCRIPTIONS: tuple[ClientSensorDescription, ...] = (
         unit=UnitOfTime.SECONDS,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:timer-outline",
+        enabled_default=False,
     ),
     ClientSensorDescription(
         "ip", "IP Address", lambda c: c.get("ip"), icon="mdi:ip-network"
     ),
     ClientSensorDescription("ssid", "SSID", lambda c: c.get("ssid"), icon="mdi:wifi"),
     ClientSensorDescription(
-        "channel", "Channel", lambda c: c.get("channel"), icon="mdi:sine-wave"
+        "channel",
+        "Channel",
+        lambda c: c.get("channel"),
+        icon="mdi:sine-wave",
+        enabled_default=False,
     ),
     ClientSensorDescription(
         "ap_name", "Access Point", lambda c: c.get("ap_name"), icon="mdi:access-point"
     ),
     ClientSensorDescription(
-        "mac", "MAC Address", lambda c: c.get("mac"), icon="mdi:identifier"
+        "mac",
+        "MAC Address",
+        lambda c: c.get("mac"),
+        icon="mdi:identifier",
+        enabled_default=False,
     ),
-    ClientSensorDescription("name", "Name", lambda c: c.get("name"), icon="mdi:tag"),
+    ClientSensorDescription(
+        "name", "Name", lambda c: c.get("name"), icon="mdi:tag", enabled_default=False
+    ),
     ClientSensorDescription(
         "os_type",
         "Device Type",
         lambda c: c.get("os_type"),
         icon="mdi:devices",
+        enabled_default=False,
     ),
     ClientSensorDescription(
         "rx_speed",
@@ -1158,6 +1183,7 @@ CLIENT_SENSOR_DESCRIPTIONS: tuple[ClientSensorDescription, ...] = (
         unit=UnitOfDataRate.MEGABITS_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:speedometer",
+        enabled_default=False,
     ),
     ClientSensorDescription(
         "tx_retry_rate",
@@ -1166,6 +1192,7 @@ CLIENT_SENSOR_DESCRIPTIONS: tuple[ClientSensorDescription, ...] = (
         unit="frames/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:refresh-circle",
+        enabled_default=False,
     ),
     ClientSensorDescription(
         "rx_retry_rate",
@@ -1174,6 +1201,7 @@ CLIENT_SENSOR_DESCRIPTIONS: tuple[ClientSensorDescription, ...] = (
         unit="frames/s",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:refresh-circle",
+        enabled_default=False,
     ),
 )
 
@@ -1231,6 +1259,7 @@ class APSensorDescription:
     icon: str = "mdi:access-point"
     icon_fn: Callable[[Any], str] | None = None
     extra_attrs_fn: Callable[[PerAPData], dict[str, Any]] | None = None
+    enabled_default: bool = True
 
 
 def _ap_status_attrs(ap: PerAPData) -> dict[str, Any]:
@@ -1377,6 +1406,7 @@ class APSensor(ArubaAPBaseEntity):
         self._attr_device_class = description.device_class
         self._attr_state_class = description.state_class
         self._attr_icon = description.icon
+        self._attr_entity_registry_enabled_default = description.enabled_default
 
     @property
     def native_value(self) -> Any:
@@ -1426,6 +1456,7 @@ class RadioSensor(ArubaBaseEntity):
         self._attr_device_class = description.device_class
         self._attr_state_class = description.state_class
         self._attr_icon = description.icon
+        self._attr_entity_registry_enabled_default = description.enabled_default
 
         # Include AP name in the radio device name
         ap_data = coordinator.data.aps.get(ap_mac) if coordinator.data else None
@@ -1517,6 +1548,7 @@ class ClientSensor(ArubaBaseEntity):
         self._attr_device_class = description.device_class
         self._attr_state_class = description.state_class
         self._attr_icon = description.icon
+        self._attr_entity_registry_enabled_default = description.enabled_default
         client = self._find_client(coordinator)
         name = client.get("name") if client else None
         mac_slug = _mac_slug(mac)

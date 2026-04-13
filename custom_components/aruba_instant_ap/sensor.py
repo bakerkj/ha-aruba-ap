@@ -1387,6 +1387,7 @@ class ArubaAPBaseEntity(ArubaBaseEntity):
             model=ap_data.model if ap_data else None,
             sw_version=ap_data.firmware if ap_data else None,
             serial_number=ap_data.serial if ap_data else None,
+            via_device=(DOMAIN, f"{entry_id}_cluster"),
         )
 
     def _ap_data(self) -> PerAPData | None:

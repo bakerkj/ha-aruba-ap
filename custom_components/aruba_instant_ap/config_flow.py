@@ -121,7 +121,7 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                     entry,
                     title=user_input[CONF_HOST],
                     data_updates=_connection_data(user_input),
-                    options_updates={
+                    options={
                         "snmp_version": user_input.get("snmp_version", "v2c"),
                         CONF_UPDATE_INTERVAL: user_input.get(
                             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL

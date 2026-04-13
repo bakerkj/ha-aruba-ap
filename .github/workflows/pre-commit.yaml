@@ -17,4 +17,6 @@ jobs:
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
-      - run: pip install pre-commit && pre-commit run --all-files
+      - run:
+          pip install pre-commit && SKIP=no-commit-to-branch pre-commit run
+          --all-files

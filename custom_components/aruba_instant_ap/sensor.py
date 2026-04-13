@@ -951,6 +951,7 @@ RADIO_SENSOR_DESCRIPTIONS: tuple[RadioSensorDescription, ...] = (
         "Status",
         lambda r: r.status,
         icon_fn=lambda v: "mdi:wifi" if v == "on" else "mdi:wifi-off",
+        enabled_default=False,
     ),
     RadioSensorDescription(
         "channel", "Channel", lambda r: r.channel, icon="mdi:sine-wave"
@@ -1324,6 +1325,7 @@ AP_SENSOR_DESCRIPTIONS: tuple[APSensorDescription, ...] = (
         lambda ap: ap.status,
         icon_fn=lambda v: "mdi:access-point" if v == "up" else "mdi:access-point-off",
         extra_attrs_fn=_ap_status_attrs,
+        enabled_default=False,
     ),
     APSensorDescription(
         "total_clients",

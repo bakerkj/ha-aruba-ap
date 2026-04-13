@@ -29,10 +29,7 @@ from custom_components.aruba_instant_ap.sensor import (
 
 # ── AP descriptions ───────────────────────────────────────────────────────────
 
-# All AP sensors should be enabled by default — there are only 6 and they are
-# all core operational metrics.
 AP_ENABLED = {
-    "ap_status",
     "total_clients",
     "firmware",
     "uptime",
@@ -40,18 +37,44 @@ AP_ENABLED = {
     "memory_usage",
 }
 
+AP_DISABLED = {
+    "ap_status",
+}
 
-@pytest.mark.parametrize("desc", AP_SENSOR_DESCRIPTIONS, ids=lambda d: d.key)
+
+@pytest.mark.parametrize(
+    "desc",
+    [d for d in AP_SENSOR_DESCRIPTIONS if d.key in AP_ENABLED],
+    ids=lambda d: d.key,
+)
 def test_ap_sensor_enabled_by_default(desc):
     assert desc.enabled_default is True, (
         f"AP sensor '{desc.key}' should be enabled by default"
     )
 
 
+@pytest.mark.parametrize(
+    "desc",
+    [d for d in AP_SENSOR_DESCRIPTIONS if d.key in AP_DISABLED],
+    ids=lambda d: d.key,
+)
+def test_ap_sensor_disabled_by_default(desc):
+    assert desc.enabled_default is False, (
+        f"AP sensor '{desc.key}' should be disabled by default"
+    )
+
+
+def test_ap_descriptions_cover_all_keys():
+    """Guard against new sensors being added without a deliberate enabled_default."""
+    all_keys = {d.key for d in AP_SENSOR_DESCRIPTIONS}
+    assert all_keys == AP_ENABLED | AP_DISABLED, (
+        f"Unclassified AP sensors: {all_keys - AP_ENABLED - AP_DISABLED}"
+    )
+
+
 # ── Radio descriptions ────────────────────────────────────────────────────────
 
 RADIO_ENABLED = {
-    "status",
     "channel",
     "tx_power",
     "clients",
@@ -63,6 +86,7 @@ RADIO_ENABLED = {
 }
 
 RADIO_DISABLED = {
+    "status",
     "tx_total_frame_rate",
     "tx_mgmt_frame_rate",
     "tx_data_frame_rate",

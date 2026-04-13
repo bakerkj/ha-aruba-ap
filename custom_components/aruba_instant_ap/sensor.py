@@ -92,7 +92,7 @@ def _as_int(v: str | None) -> int | None:
         return None
     try:
         return int(v)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
 
 
@@ -213,7 +213,7 @@ def _parse_mac_table(
                 try:
                     mac = ":".join(f"{int(b):02x}" for b in mac_parts)
                     result[mac] = val
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     pass
     return result
 
@@ -235,7 +235,7 @@ def _parse_radio_table(
                     mac = ":".join(f"{int(b):02x}" for b in parts[:6])
                     radio_idx = int(parts[6])
                     result[(mac, radio_idx)] = val
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     pass
     return result
 
@@ -294,7 +294,7 @@ def _ticks_to_seconds(v: str | None) -> int | None:
         return None
     try:
         return int(v) // 100
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
 
 

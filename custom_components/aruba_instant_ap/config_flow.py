@@ -13,6 +13,7 @@ from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
+    CONF_CLIENTS_MAPPED_ONLY,
     CONF_COMMUNITY,
     CONF_HOST,
     CONF_MAC_HOSTNAME_FILE,
@@ -39,6 +40,7 @@ STEP_USER_SCHEMA = vol.Schema(
             vol.Coerce(int), vol.Range(min=10)
         ),
         vol.Optional(CONF_MAC_HOSTNAME_FILE, default=""): str,
+        vol.Optional(CONF_CLIENTS_MAPPED_ONLY, default=False): bool,
     }
 )
 
@@ -82,6 +84,9 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         CONF_MAC_HOSTNAME_FILE: user_input.get(
                             CONF_MAC_HOSTNAME_FILE, ""
                         ),
+                        CONF_CLIENTS_MAPPED_ONLY: user_input.get(
+                            CONF_CLIENTS_MAPPED_ONLY, False
+                        ),
                     },
                 )
 
@@ -124,6 +129,9 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         CONF_MAC_HOSTNAME_FILE: user_input.get(
                             CONF_MAC_HOSTNAME_FILE, ""
                         ),
+                        CONF_CLIENTS_MAPPED_ONLY: user_input.get(
+                            CONF_CLIENTS_MAPPED_ONLY, False
+                        ),
                     },
                 )
 
@@ -154,6 +162,10 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         CONF_MAC_HOSTNAME_FILE,
                         default=entry.options.get(CONF_MAC_HOSTNAME_FILE, ""),
                     ): str,
+                    vol.Optional(
+                        CONF_CLIENTS_MAPPED_ONLY,
+                        default=entry.options.get(CONF_CLIENTS_MAPPED_ONLY, False),
+                    ): bool,
                 }
             ),
             errors=errors,

@@ -1161,7 +1161,7 @@ CLIENT_SENSOR_DESCRIPTIONS: tuple[ClientSensorDescription, ...] = (
         icon="mdi:speedometer",
     ),
     ClientSensorDescription(
-        "uptime",
+        "connection_uptime",
         "Connection Uptime",
         lambda c: c.get("uptime_seconds"),
         unit=UnitOfTime.SECONDS,

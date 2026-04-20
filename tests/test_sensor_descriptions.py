@@ -145,7 +145,7 @@ CLIENT_ENABLED = {
 
 CLIENT_DISABLED = {
     "ht_mode",
-    "uptime",
+    "connection_uptime",
     "channel",
     "mac",
     "name",

@@ -6,7 +6,7 @@ dependencies = ["puresnmp>=2.0.0"]
 
 [dependency-groups]
 test = [
-  "pytest-homeassistant-custom-component",
+  "pytest-homeassistant-custom-component>=0.13.323",
 ]
 
 [tool.pytest.ini_options]

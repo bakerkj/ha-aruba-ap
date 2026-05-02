@@ -30,7 +30,7 @@ OID_VC_IP: Final = f"{_AI_BASE}.1.5.0"  # Virtual Controller IP (scalar)
 
 # ── AP Table (_AI_BASE.2.1.1) ────────────────────────────────────────────────
 # Indexed by AP MAC address (6-octet OID suffix).
-# Observed from AOS-8.13.x walk of ap.keneli.org (5-AP cluster).
+# Observed from AOS-8.13.x walk of a 5-AP cluster.
 _AP_TABLE: Final = f"{_AI_BASE}.2.1.1"
 OID_AP_MAC: Final = f"{_AP_TABLE}.1"  # AP MAC address (hex string '0x...')
 OID_AP_NAME: Final = f"{_AP_TABLE}.2"  # AP name / location label
@@ -51,7 +51,7 @@ OID_AP_SW_VERSION: Final = f"{_AI_BASE}.1.4"  # walks to .1.4.0 = cluster firmwa
 
 # ── Radio Table (_AI_BASE.2.2.1) ─────────────────────────────────────────────
 # Indexed by (AP MAC address, radio index). Last OID integer = radio index.
-# Observed from AOS-8.13.x walk of ap.keneli.org (5-AP cluster).
+# Observed from AOS-8.13.x walk of a 5-AP cluster.
 _RADIO_TABLE: Final = f"{_AI_BASE}.2.2.1"
 # col 1: aiRadioAPMACAddress (INDEX)
 # col 2: aiRadioIndex (INDEX)
@@ -108,7 +108,7 @@ OID_RADIO_TYPE: Final = ""  # Not in MIB; derive from channel string
 
 # ── BSS/SSID Table (_AI_BASE.2.3.1) ─────────────────────────────────────────
 # Indexed by (AP MAC, bss_idx). Each BSS entry is one SSID on one radio.
-# Confirmed from AOS-8.13.x walk of ap.keneli.org.
+# Confirmed from AOS-8.13.x walk.
 _BSS_TABLE: Final = f"{_AI_BASE}.2.3.1"
 # col 1: AP MAC address
 # col 2: BSS index (serial 0..N, not the physical radio index)
@@ -118,7 +118,7 @@ OID_BSS_BSSID: Final = f"{_BSS_TABLE}.4"  # BSSID (Hex-STRING) for this BSS
 
 # ── Client Table (_AI_BASE.2.4.1) ─────────────────────────────────────────────
 # Indexed by client MAC address (6-octet OID suffix). 115 entries observed.
-# Confirmed from AOS-8.13.x walk of ap.keneli.org.
+# Confirmed from AOS-8.13.x walk.
 _CLIENT_TABLE: Final = f"{_AI_BASE}.2.4.1"
 OID_CLIENT_BSSID: Final = (
     f"{_CLIENT_TABLE}.2"  # Associated BSSID: aiClientWlanMACAddress

@@ -1,0 +1,26 @@
+# Changelog
+
+## [0.0.9](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.8...v0.0.9) (2026-05-10)
+
+
+### Features
+
+* automate releases with release-please and commitlint ([#21](https://github.com/bakerkj/ha-aruba-ap/issues/21)) ([beaa26f](https://github.com/bakerkj/ha-aruba-ap/commit/beaa26f770fae7a2320150ba7d2dfc9c7aebef33))
+
+
+### Miscellaneous Chores
+
+* **deps:** update astral-sh/setup-uv action to v8 ([6609292](https://github.com/bakerkj/ha-aruba-ap/commit/6609292862fa2d75ffde4714dc6477738cff1c41))
+* **deps:** update astral-sh/setup-uv action to v8 ([8cb0c61](https://github.com/bakerkj/ha-aruba-ap/commit/8cb0c617767d514ac384d92968d97c161cb83d7a))
+* **deps:** update github-actions ([#24](https://github.com/bakerkj/ha-aruba-ap/issues/24)) ([55b77b6](https://github.com/bakerkj/ha-aruba-ap/commit/55b77b6ac89b12a17af8aeb485e732aa56a2c20f))
+* **deps:** update pre-commit hook alessandrojcm/commitlint-pre-commit-hook to v9.25.0 ([#23](https://github.com/bakerkj/ha-aruba-ap/issues/23)) ([0340941](https://github.com/bakerkj/ha-aruba-ap/commit/03409416515c99db855872a00f7b99763174ca04))
+* **deps:** update pre-commit hook pre-commit/mirrors-mypy to v2 ([#20](https://github.com/bakerkj/ha-aruba-ap/issues/20)) ([a15ac39](https://github.com/bakerkj/ha-aruba-ap/commit/a15ac396681f8f098d25b7bf67da4486c073a18d))
+* **deps:** update pre-commit hook python-jsonschema/check-jsonschema to v0.37.2 ([#18](https://github.com/bakerkj/ha-aruba-ap/issues/18)) ([533a581](https://github.com/bakerkj/ha-aruba-ap/commit/533a581f3cc926af106cca7653b095c83aaca610))
+* **deps:** update pre-commit hooks ([4ec013b](https://github.com/bakerkj/ha-aruba-ap/commit/4ec013b0406f00855ec9775677380e19dca3f585))
+* **deps:** update pre-commit hooks ([b641df5](https://github.com/bakerkj/ha-aruba-ap/commit/b641df525f8f543979d4f3fe6a6fd7ca02e469ff))
+
+
+### Continuous Integration
+
+* align prettier with release-please's manifest.json output ([#26](https://github.com/bakerkj/ha-aruba-ap/issues/26)) ([04e6711](https://github.com/bakerkj/ha-aruba-ap/commit/04e6711f00cca545d1a16d073bc82f0da7ac6619))
+* make all conventional commit types visible in release-please changelog-sections ([#25](https://github.com/bakerkj/ha-aruba-ap/issues/25)) ([e82448c](https://github.com/bakerkj/ha-aruba-ap/commit/e82448c60c42b60f73eecd96034bbb842c1dfd27))

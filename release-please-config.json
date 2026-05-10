@@ -5,6 +5,8 @@
       "release-type": "simple",
       "package-name": "ha-aruba-ap",
       "include-component-in-tag": false,
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
       "extra-files": [
         {
           "type": "json",

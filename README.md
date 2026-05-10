@@ -1,4 +1,4 @@
-4# Aruba Instant AP — Home Assistant Integration
+# Aruba Instant AP — Home Assistant Integration
 
 Monitors an Aruba Instant AP cluster via SNMP and exposes per-AP, per-radio, and
 per-client sensors in Home Assistant.
@@ -111,3 +111,20 @@ Several MAC formats are accepted:
 
 - Aruba Instant (AOS-8) cluster with SNMP v2c enabled
 - Home Assistant 2026.4 or later
+
+## Development
+
+Commits must follow the
+[Conventional Commits](https://www.conventionalcommits.org/) spec —
+release-please uses commit prefixes (`feat:`, `fix:`, etc.) to drive version
+bumps.
+
+After cloning, install the pre-commit hooks **including the commit-msg hook**
+(the default `pre-commit install` only wires up pre-commit-stage hooks):
+
+```
+uvx pre-commit install --hook-type pre-commit --hook-type commit-msg
+```
+
+Without `--hook-type commit-msg`, malformed commit messages won't be caught
+locally — CI (`Commitlint` workflow) will still reject them.

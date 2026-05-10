@@ -1,3 +1,5 @@
+ha-config/
+aruba_instant_ap.tgz
 __pycache__/
 *.pyc
 *.pyo

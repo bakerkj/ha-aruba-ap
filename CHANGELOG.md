@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.10](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.9...v0.0.10) (2026-05-10)
+
+
+### Continuous Integration
+
+* grant release workflow contents:write for asset upload ([#27](https://github.com/bakerkj/ha-aruba-ap/issues/27)) ([ff0f5f7](https://github.com/bakerkj/ha-aruba-ap/commit/ff0f5f723baeb04c361e990b6cdd0135f332043b))
+
 ## [0.0.9](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.8...v0.0.9) (2026-05-10)
 
 

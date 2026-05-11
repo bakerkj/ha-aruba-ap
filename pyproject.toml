@@ -1,6 +1,6 @@
 [project]
 name = "ha-aruba-ap"
-version = "0.0.10" # x-release-please-version
+version = "0.0.11" # x-release-please-version
 requires-python = ">=3.14.4,<3.15"
 dependencies = ["puresnmp>=2.0.0"]
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.0.11](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.10...v0.0.11) (2026-05-11)
+
+
+### Miscellaneous Chores
+
+* migrate prettier hook to maintained rbubley mirror ([#31](https://github.com/bakerkj/ha-aruba-ap/issues/31)) ([0dc1020](https://github.com/bakerkj/ha-aruba-ap/commit/0dc10209dd0d7211bc8a74249ceef5a830b9d010))
+* rename default branch from master to main ([#29](https://github.com/bakerkj/ha-aruba-ap/issues/29)) ([b4c83ab](https://github.com/bakerkj/ha-aruba-ap/commit/b4c83ab8ae98b93265fdb83f3cfdd680b122583d))
+
+
+### Continuous Integration
+
+* distinct setup-uv cache keys for tests and pre-commit jobs ([#32](https://github.com/bakerkj/ha-aruba-ap/issues/32)) ([86ed493](https://github.com/bakerkj/ha-aruba-ap/commit/86ed4938efd93269788a020f9a4480caac7b2c7e))
+* pin ubuntu-latest runners to ubuntu-24.04 for renovate tracking ([#33](https://github.com/bakerkj/ha-aruba-ap/issues/33)) ([9348294](https://github.com/bakerkj/ha-aruba-ap/commit/9348294a645b8c70d110c7edca21a3d69ef91acf))
+* run mypy against real runtime deps, drop --ignore-missing-imports ([#34](https://github.com/bakerkj/ha-aruba-ap/issues/34)) ([00fe91d](https://github.com/bakerkj/ha-aruba-ap/commit/00fe91df6696093a8e7887d41d7de403b19508b6))
+* skip mypy in the pre-commit CI workflow ([#35](https://github.com/bakerkj/ha-aruba-ap/issues/35)) ([21b3120](https://github.com/bakerkj/ha-aruba-ap/commit/21b3120b86882dd0e612b0138c7421e5b4041ec1))
+
 ## [0.0.10](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.9...v0.0.10) (2026-05-10)
 
 

@@ -178,7 +178,7 @@ async def async_snmp_walk(
         )
         oid_obj = ObjectIdentifier(base_oid)
         walker = (
-            client.walk([oid_obj])
+            client.walk(oid_obj)
             if snmp_version == "v1"
             else client.bulkwalk([oid_obj], bulk_size=25)
         )

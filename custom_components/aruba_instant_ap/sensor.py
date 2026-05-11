@@ -1452,7 +1452,7 @@ class APSensor(ArubaAPBaseEntity):
         return None if ap is None else self._description.value_fn(ap)
 
     @property
-    def icon(self) -> str:
+    def icon(self) -> str | None:
         if self._description.icon_fn:
             return self._description.icon_fn(self.native_value)
         return self._attr_icon
@@ -1555,7 +1555,7 @@ class RadioSensor(ArubaBaseEntity):
         return None if radio is None else self._description.value_fn(radio)
 
     @property
-    def icon(self) -> str:
+    def icon(self) -> str | None:
         if self._description.icon_fn:
             return self._description.icon_fn(self.native_value)
         return self._attr_icon
@@ -1631,11 +1631,15 @@ class ClientSensor(ArubaBaseEntity):
             self.entity_id = f"sensor.{slugify(name)}_{description.key}"
         else:
             self.entity_id = f"sensor.client_{mac_slug}_{description.key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{entry_id}_client_{_mac_slug(mac)}")},
-            name=_client_display_name(client, mac),
-            via_device=self._radio_via_device(client),
-        )
+        identifiers = {(DOMAIN, f"{entry_id}_client_{_mac_slug(mac)}")}
+        name = _client_display_name(client, mac)
+        via_device = self._radio_via_device(client)
+        if via_device is None:
+            self._attr_device_info = DeviceInfo(identifiers=identifiers, name=name)
+        else:
+            self._attr_device_info = DeviceInfo(
+                identifiers=identifiers, name=name, via_device=via_device
+            )
 
     def _find_client(
         self, coordinator: ArubaAPCoordinator | None = None

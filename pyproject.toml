@@ -8,6 +8,17 @@ dependencies = ["puresnmp>=2.0.0"]
 test = [
   "pytest-homeassistant-custom-component>=0.13.323",
 ]
+dev = [
+  { include-group = "test" },
+  "mypy>=1.20.0",
+]
+
+[tool.mypy]
+mypy_path = ["custom_components"]
+
+[[tool.mypy.overrides]]
+module = ["puresnmp_plugins.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

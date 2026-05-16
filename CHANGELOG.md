@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.0.12](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.11...v0.0.12) (2026-05-16)
+
+
+### Performance Improvements
+
+* add stable AP boot-time sensor, disable raw uptime by default ([#41](https://github.com/bakerkj/ha-aruba-ap/issues/41)) ([5168b6a](https://github.com/bakerkj/ha-aruba-ap/commit/5168b6ab875af7417eed0d8100ad4cbf0464229d))
+* round client tx/rx throughput to integer B/s ([#39](https://github.com/bakerkj/ha-aruba-ap/issues/39)) ([00c3ad6](https://github.com/bakerkj/ha-aruba-ap/commit/00c3ad64bb2fe523c2b4a0fe563c1ac89e8d10ca))
+* round radio tx/rx throughput to integer B/s ([#40](https://github.com/bakerkj/ha-aruba-ap/issues/40)) ([c09bbb9](https://github.com/bakerkj/ha-aruba-ap/commit/c09bbb97afd441d873c4b51162950426a9bdea60))
+
+
+### Miscellaneous Chores
+
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.15.13 ([#36](https://github.com/bakerkj/ha-aruba-ap/issues/36)) ([62b97d9](https://github.com/bakerkj/ha-aruba-ap/commit/62b97d982241d89b308b1dfb357bcc682bee4e40))
+
+
+### Continuous Integration
+
+* keep uv.lock project version in sync via release-please ([#38](https://github.com/bakerkj/ha-aruba-ap/issues/38)) ([6a2b98d](https://github.com/bakerkj/ha-aruba-ap/commit/6a2b98d387f0c9b6b0858657e7b4648856d80dc7))
+
 ## [0.0.11](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.10...v0.0.11) (2026-05-11)
 
 

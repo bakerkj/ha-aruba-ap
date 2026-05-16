@@ -26,6 +26,11 @@
           "path": "custom_components/aruba_instant_ap/manifest.json",
           "jsonpath": "$.version"
         },
+        {
+          "type": "toml",
+          "path": "uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='ha-aruba-ap')].version"
+        },
         "pyproject.toml"
       ]
     }

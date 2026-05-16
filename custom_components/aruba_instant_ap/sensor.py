@@ -876,10 +876,11 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
                     if dt > 0:
                         tx_delta = tx - prev_tx
                         rx_delta = rx - prev_rx
+                        # round to integer B/s
                         if tx_delta >= 0:
-                            entry["tx_rate"] = round(tx_delta / dt, 1)
+                            entry["tx_rate"] = round(tx_delta / dt)
                         if rx_delta >= 0:
-                            entry["rx_rate"] = round(rx_delta / dt, 1)
+                            entry["rx_rate"] = round(rx_delta / dt)
                         if tx_ret is not None:
                             entry["tx_retry_rate"] = _counter_rate(
                                 tx_ret, prev_tx_ret, dt

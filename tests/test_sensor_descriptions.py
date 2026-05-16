@@ -32,13 +32,16 @@ from custom_components.aruba_instant_ap.sensor import (
 AP_ENABLED = {
     "total_clients",
     "firmware",
-    "uptime",
+    "boot_time",
     "cpu_usage",
     "memory_usage",
 }
 
 AP_DISABLED = {
     "ap_status",
+    # superseded by the stable "boot_time" timestamp; the seconds counter
+    # writes a recorder row every poll, so it's off by default
+    "uptime",
 }
 
 

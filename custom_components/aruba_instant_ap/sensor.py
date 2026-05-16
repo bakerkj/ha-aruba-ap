@@ -675,8 +675,17 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
                         prev_time,
                     ) = prev
                     dt = now - prev_time
-                    tx_bps = _counter_rate(tx_b, prev_tx_b, dt)
-                    rx_bps = _counter_rate(rx_b, prev_rx_b, dt)
+                    # round to integer B/s
+                    tx_bps = (
+                        round(v)
+                        if (v := _counter_rate(tx_b, prev_tx_b, dt)) is not None
+                        else None
+                    )
+                    rx_bps = (
+                        round(v)
+                        if (v := _counter_rate(rx_b, prev_rx_b, dt)) is not None
+                        else None
+                    )
                     tx_tot_ps = _counter_rate(tx_tot_f, prev_tx_tot_f, dt)
                     tx_mgmt_ps = _counter_rate(tx_mgmt_f, prev_tx_mgmt_f, dt)
                     tx_dat_ps = _counter_rate(tx_dat_f, prev_tx_dat_f, dt)

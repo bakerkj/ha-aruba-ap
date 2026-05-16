@@ -11,7 +11,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -23,7 +23,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfDataRate, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry
-from homeassistant.util import slugify
+from homeassistant.util import dt as dt_util, slugify
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -81,6 +81,13 @@ from .const import (
 from .snmp_helper import async_snmp_walk
 
 _LOGGER = logging.getLogger(__name__)
+
+# Max drift (seconds) between successive computed AP boot times before we treat
+# it as a real change (reboot / clock correction) rather than poll jitter. The
+# raw `now - uptime` value wobbles a few seconds every poll from scheduling and
+# the SNMP TimeTicks // 100 truncation; without this the timestamp would change
+# every poll and save nothing.
+_BOOT_TIME_TOLERANCE_S = 30
 
 # 32-bit counter wrap-around value
 _MAX32: int = 2**32
@@ -168,6 +175,7 @@ class PerAPData:
     firmware: str | None = None  # cluster-wide firmware
     status: str | None = None  # "up" or "down"
     uptime_seconds: int | None = None
+    boot_time: datetime | None = None  # stable: only changes on reboot
     role: str | None = None  # "cluster conductor" / "cluster member"
     cpu_pct: int | None = None
     mem_free_bytes: int | None = None
@@ -380,6 +388,8 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
         ] = {}
         # client_mac → (tx_bytes, rx_bytes, tx_retries, rx_retries, monotonic_time)
         self._prev_client_counters: dict[str, tuple[int, int, int, int, float]] = {}
+        # ap_mac → last reported boot time (held stable within tolerance)
+        self._prev_ap_boot: dict[str, datetime] = {}
 
     async def _load_mac_hostname_file(self) -> dict[str, str]:
         """Load MAC→hostname mapping from a JSON file on disk."""
@@ -612,6 +622,7 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
         all_radio_keys = set(radio_statuses) | set(radio_channels)
 
         now = time.monotonic()
+        now_dt = dt_util.utcnow()
 
         # ── Build PerAPData per AP ─────────────────────────────────────────
         aps: dict[str, PerAPData] = {}
@@ -742,6 +753,23 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
                 uptime_hundredths // 100 if uptime_hundredths is not None else None
             )
 
+            # Derive a *stable* boot time. `now_dt - uptime` jitters a few
+            # seconds every poll, so hold the previous value unless it drifts
+            # past tolerance (reboot / clock correction).
+            boot_time: datetime | None = None
+            if uptime_seconds is not None:
+                boot_candidate = now_dt - timedelta(seconds=uptime_seconds)
+                prev_boot = self._prev_ap_boot.get(mac)
+                if (
+                    prev_boot is not None
+                    and abs((boot_candidate - prev_boot).total_seconds())
+                    <= _BOOT_TIME_TOLERANCE_S
+                ):
+                    boot_time = prev_boot
+                else:
+                    boot_time = boot_candidate
+                self._prev_ap_boot[mac] = boot_time
+
             status_val = ap_statuses.get(mac)
             ap_status = (
                 "up"
@@ -760,6 +788,7 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
                 firmware=cluster_firmware,
                 status=ap_status,
                 uptime_seconds=uptime_seconds,
+                boot_time=boot_time,
                 role=ap_roles.get(mac),
                 cpu_pct=_as_int(ap_cpu.get(mac)),
                 mem_free_bytes=_as_int(ap_mem_free.get(mac)),
@@ -1338,12 +1367,22 @@ AP_SENSOR_DESCRIPTIONS: tuple[APSensorDescription, ...] = (
         "firmware", "Firmware", lambda ap: ap.firmware, icon="mdi:chip"
     ),
     APSensorDescription(
+        "boot_time",
+        "Started",
+        lambda ap: ap.boot_time,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:clock-start",
+    ),
+    APSensorDescription(
         "uptime",
         "Uptime",
         lambda ap: ap.uptime_seconds,
         unit=UnitOfTime.SECONDS,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:timer-outline",
+        # Increments every poll → a recorder row per poll. Superseded by the
+        # stable "Started" timestamp; off by default to cut recorder volume.
+        enabled_default=False,
     ),
     APSensorDescription(
         "cpu_usage",

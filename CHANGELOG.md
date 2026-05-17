@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.14](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.13...v0.0.14) (2026-05-17)
+
+
+### Performance Improvements
+
+* decimate high-rate client/radio sensors to cut recorder writes ([#44](https://github.com/bakerkj/ha-aruba-ap/issues/44)) ([f5b18d9](https://github.com/bakerkj/ha-aruba-ap/commit/f5b18d9c85fb2b6d07390ccfb8ccb1e265ff0121))
+
 ## [0.0.13](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.12...v0.0.13) (2026-05-17)
 
 

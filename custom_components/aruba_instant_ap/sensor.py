@@ -82,8 +82,9 @@ from .snmp_helper import async_snmp_walk
 
 _LOGGER = logging.getLogger(__name__)
 
-# Max drift (seconds) between successive computed AP boot times before we treat
-# it as a real change (reboot / clock correction) rather than poll jitter. The
+# Max drift (seconds) between successive computed AP boot / client start times
+# before we treat it as a real change (reboot / reconnect / clock correction)
+# rather than poll jitter. The
 # raw `now - uptime` value wobbles a few seconds every poll from scheduling and
 # the SNMP TimeTicks // 100 truncation; without this the timestamp would change
 # every poll and save nothing.
@@ -390,6 +391,8 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
         self._prev_client_counters: dict[str, tuple[int, int, int, int, float]] = {}
         # ap_mac → last reported boot time (held stable within tolerance)
         self._prev_ap_boot: dict[str, datetime] = {}
+        # client_mac → last reported start time (held stable within tolerance)
+        self._prev_client_start: dict[str, datetime] = {}
 
     async def _load_mac_hostname_file(self) -> dict[str, str]:
         """Load MAC→hostname mapping from a JSON file on disk."""
@@ -871,6 +874,8 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
 
         # Build fresh counters dict — only keeps entries for currently-seen clients
         new_client_counters: dict[str, tuple[int, int, int, int, float]] = {}
+        # Same pruning for stable client start times
+        new_client_start: dict[str, datetime] = {}
 
         clients: list[dict[str, Any]] = []
         for mac in sorted(all_client_macs):
@@ -940,12 +945,28 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
                 entry["rx_speed_mbps"] = rx_rate
             if (uptime_s := _ticks_to_seconds(cl_uptimes.get(mac))) is not None:
                 entry["uptime_seconds"] = uptime_s
+                # Derive a *stable* start time. `now_dt - uptime` jitters a
+                # few seconds every poll, so hold the previous value unless it
+                # drifts past tolerance (reconnect / clock correction).
+                start_candidate = now_dt - timedelta(seconds=uptime_s)
+                prev_start = self._prev_client_start.get(mac)
+                if (
+                    prev_start is not None
+                    and abs((start_candidate - prev_start).total_seconds())
+                    <= _BOOT_TIME_TOLERANCE_S
+                ):
+                    start_time = prev_start
+                else:
+                    start_time = start_candidate
+                new_client_start[mac] = start_time
+                entry["start_time"] = start_time
             os_str = cl_os.get(mac)
             if os_str and os_str.strip() and os_str.upper() != "NOFP":
                 entry["os_type"] = os_str.strip()
             clients.append(entry)
 
         self._prev_client_counters = new_client_counters
+        self._prev_client_start = new_client_start
 
         cluster_total_clients = sum(ap.total_clients for ap in aps.values())
         cluster_clients_by_radio_type: dict[str, int] = {}
@@ -1200,12 +1221,21 @@ CLIENT_SENSOR_DESCRIPTIONS: tuple[ClientSensorDescription, ...] = (
         icon="mdi:speedometer",
     ),
     ClientSensorDescription(
+        "start_time",
+        "Started",
+        lambda c: c.get("start_time"),
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:clock-start",
+    ),
+    ClientSensorDescription(
         "connection_uptime",
         "Connection Uptime",
         lambda c: c.get("uptime_seconds"),
         unit=UnitOfTime.SECONDS,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:timer-outline",
+        # Increments every poll → a recorder row per poll. Superseded by the
+        # stable "Started" timestamp; off by default to cut recorder volume.
         enabled_default=False,
     ),
     ClientSensorDescription(

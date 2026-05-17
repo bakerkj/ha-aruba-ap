@@ -144,6 +144,7 @@ CLIENT_ENABLED = {
     "ip",
     "ssid",
     "ap_name",
+    "start_time",
 }
 
 CLIENT_DISABLED = {

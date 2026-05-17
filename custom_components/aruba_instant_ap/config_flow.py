@@ -17,8 +17,10 @@ from .const import (
     CONF_COMMUNITY,
     CONF_HOST,
     CONF_MAC_HOSTNAME_FILE,
+    CONF_RECORD_DECIMATION,
     CONF_SNMP_PORT,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_RECORD_DECIMATION,
     DEFAULT_SNMP_PORT,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
@@ -39,6 +41,9 @@ STEP_USER_SCHEMA = vol.Schema(
         vol.Required(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): vol.All(
             vol.Coerce(int), vol.Range(min=10)
         ),
+        vol.Required(
+            CONF_RECORD_DECIMATION, default=DEFAULT_RECORD_DECIMATION
+        ): vol.All(vol.Coerce(int), vol.Range(min=1)),
         vol.Optional(CONF_MAC_HOSTNAME_FILE, default=""): str,
         vol.Optional(CONF_CLIENTS_MAPPED_ONLY, default=False): bool,
     }
@@ -80,6 +85,9 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         "snmp_version": user_input.get("snmp_version", "v2c"),
                         CONF_UPDATE_INTERVAL: user_input.get(
                             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+                        ),
+                        CONF_RECORD_DECIMATION: user_input.get(
+                            CONF_RECORD_DECIMATION, DEFAULT_RECORD_DECIMATION
                         ),
                         CONF_MAC_HOSTNAME_FILE: user_input.get(
                             CONF_MAC_HOSTNAME_FILE, ""
@@ -126,6 +134,9 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         CONF_UPDATE_INTERVAL: user_input.get(
                             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
                         ),
+                        CONF_RECORD_DECIMATION: user_input.get(
+                            CONF_RECORD_DECIMATION, DEFAULT_RECORD_DECIMATION
+                        ),
                         CONF_MAC_HOSTNAME_FILE: user_input.get(
                             CONF_MAC_HOSTNAME_FILE, ""
                         ),
@@ -158,6 +169,12 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
                         ),
                     ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+                    vol.Required(
+                        CONF_RECORD_DECIMATION,
+                        default=entry.options.get(
+                            CONF_RECORD_DECIMATION, DEFAULT_RECORD_DECIMATION
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1)),
                     vol.Optional(
                         CONF_MAC_HOSTNAME_FILE,
                         default=entry.options.get(CONF_MAC_HOSTNAME_FILE, ""),

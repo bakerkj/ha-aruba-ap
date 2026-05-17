@@ -17,8 +17,10 @@ from .const import (
     CONF_COMMUNITY,
     CONF_HOST,
     CONF_MAC_HOSTNAME_FILE,
+    CONF_RECORD_DECIMATION,
     CONF_SNMP_PORT,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_RECORD_DECIMATION,
     DEFAULT_SNMP_PORT,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
@@ -46,6 +48,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     mac_hostname_file = entry.options.get(CONF_MAC_HOSTNAME_FILE, "")
     clients_mapped_only = entry.options.get(CONF_CLIENTS_MAPPED_ONLY, False)
+    record_decimation = max(
+        1, entry.options.get(CONF_RECORD_DECIMATION, DEFAULT_RECORD_DECIMATION)
+    )
 
     coordinator = ArubaAPCoordinator(
         hass,
@@ -56,6 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_seconds,
         mac_hostname_file,
         clients_mapped_only,
+        record_decimation,
     )
 
     hass.data[DOMAIN][entry.entry_id] = coordinator

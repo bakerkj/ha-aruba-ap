@@ -7,7 +7,8 @@
         "data": {
           "host": "IP Address or Hostname",
           "community": "SNMP Community String",
-          "snmp_port": "SNMP Port"
+          "snmp_port": "SNMP Port",
+          "record_decimation": "Recorder decimation (publish high-rate sensors every Nth poll; 1 = every poll)"
         }
       },
       "reconfigure": {
@@ -15,7 +16,8 @@
         "data": {
           "host": "IP Address or Hostname",
           "community": "SNMP Community String",
-          "snmp_port": "SNMP Port"
+          "snmp_port": "SNMP Port",
+          "record_decimation": "Recorder decimation (publish high-rate sensors every Nth poll; 1 = every poll)"
         }
       }
     },

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.13](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.12...v0.0.13) (2026-05-17)
+
+
+### Features
+
+* add per-client "Started" timestamp sensor ([#42](https://github.com/bakerkj/ha-aruba-ap/issues/42)) ([8e56f3f](https://github.com/bakerkj/ha-aruba-ap/commit/8e56f3f88d58f35ebc0032c00dc74fa840b73a9c))
+
 ## [0.0.12](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.11...v0.0.12) (2026-05-16)
 
 

@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import time
+import zlib
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -77,6 +78,7 @@ from .const import (
     OID_RADIO_TX_POWER,
     OID_RADIO_UTILIZATION,
     OID_RADIO_UTILIZATION64,
+    DEFAULT_RECORD_DECIMATION,
 )
 from .snmp_helper import async_snmp_walk
 
@@ -92,6 +94,13 @@ _BOOT_TIME_TOLERANCE_S = 30
 
 # 32-bit counter wrap-around value
 _MAX32: int = 2**32
+
+# Decimated instantaneous-gauge metrics, by aggregation over the window.
+# SNR is continuous (dB) → windowed mean is meaningful. Link speed hops a
+# discrete MCS ladder → publish the latest real rung (a mean would fabricate
+# off-ladder values and churn the recorder more).
+_MEAN_GAUGES: tuple[str, ...] = ("snr",)
+_LATEST_GAUGES: tuple[str, ...] = ("speed", "rx_speed")
 
 
 def _as_int(v: str | None) -> int | None:
@@ -365,6 +374,7 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
         update_seconds: int,
         mac_hostname_file: str = "",
         clients_mapped_only: bool = False,
+        record_decimation: int = DEFAULT_RECORD_DECIMATION,
     ) -> None:
         super().__init__(
             hass,
@@ -378,21 +388,53 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
         self.snmp_version = snmp_version
         self.mac_hostname_file = mac_hostname_file
         self.clients_mapped_only = clients_mapped_only
+        self._record_decimation = max(1, record_decimation)
         self._mac_hostname_map: dict[str, str] = {}
-        # (mac, radio_idx) → (tx_bytes, rx_bytes,
-        #                      tx_total_f, tx_mgmt_f, tx_data_f,
-        #                      rx_total_f, rx_data_f, rx_mgmt_f,
-        #                      tx_dropped, rx_bad, phy_events, monotonic_time)
-        self._prev_radio_counters: dict[
+        # ── Per-poll references (advance every poll) ───────────────────────
+        # Frame/drop/event counters → rates published every poll, unchanged.
+        # (mac, radio_idx) → (tx_total_f, tx_mgmt_f, tx_data_f, rx_total_f,
+        #                      rx_data_f, rx_mgmt_f, tx_dropped, rx_bad,
+        #                      phy_events, monotonic_time)
+        self._prev_radio_frames: dict[
             tuple[str, int],
-            tuple[int, int, int, int, int, int, int, int, int, int, int, float],
+            tuple[int, int, int, int, int, int, int, int, int, float],
         ] = {}
-        # client_mac → (tx_bytes, rx_bytes, tx_retries, rx_retries, monotonic_time)
-        self._prev_client_counters: dict[str, tuple[int, int, int, int, float]] = {}
+        # client_mac → (tx_retries, rx_retries, monotonic_time)
+        self._prev_client_retry: dict[str, tuple[int, int, float]] = {}
+        # ── Decimated references (advance only on emit cycles) ─────────────
+        # Byte counters → throughput sensors. The reference spanning the whole
+        # window makes the published rate the exact window average.
+        # (mac, radio_idx) → (tx_bytes, rx_bytes, monotonic_time)
+        self._prev_radio_bytes: dict[tuple[str, int], tuple[int, int, float]] = {}
+        # client_mac → (tx_bytes, rx_bytes, monotonic_time)
+        self._prev_client_counters: dict[str, tuple[int, int, float]] = {}
         # ap_mac → last reported boot time (held stable within tolerance)
         self._prev_ap_boot: dict[str, datetime] = {}
         # client_mac → last reported start time (held stable within tolerance)
         self._prev_client_start: dict[str, datetime] = {}
+        # Decimated-emit state. Last published values are held between emit
+        # cycles so the recorder dedupes them.
+        self._poll_cycle: int = -1
+        # client_mac → last published {tx_rate, rx_rate, snr, speed, rx_speed}
+        self._client_out: dict[str, dict[str, Any]] = {}
+        # client_mac → metric → window state for instantaneous gauges:
+        # (sum, count) for mean gauges (snr), last sample for latest gauges
+        # (speed, rx_speed). Reset each emit cycle / first sighting.
+        self._client_avg_acc: dict[str, dict[str, Any]] = {}
+        # (ap_mac, radio_idx) → last published {tx_bps, rx_bps}
+        self._radio_out: dict[tuple[str, int], dict[str, Any]] = {}
+
+    def _emit_now(self, key: str) -> bool:
+        """Whether `key`'s decimated sensors publish on this poll cycle.
+
+        Each key emits once per ``record_decimation`` cycles, phase-staggered
+        by a stable hash of the key so emissions spread across cycles instead
+        of bursting all at once.
+        """
+        span = self._record_decimation
+        if span <= 1:
+            return True
+        return self._poll_cycle % span == zlib.crc32(key.encode()) % span
 
     async def _load_mac_hostname_file(self) -> dict[str, str]:
         """Load MAC→hostname mapping from a JSON file on disk."""
@@ -452,6 +494,7 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
 
     async def _fetch_data(self) -> ArubaClusterData:
         """Fetch all cluster data via parallel SNMP walks."""
+        self._poll_cycle += 1
         (
             ap_name_raw,
             ap_ip_raw,
@@ -668,15 +711,42 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
                 rx_bad = rx_bad_raw or 0
                 phy_evt = phy_evt_raw or 0
 
-                # Compute rates from previous poll
-                tx_bps = rx_bps = tx_drp_ps = rx_bad_ps = phy_evt_ps = None
+                # ── tx/rx throughput: decimated emit ──────────────────────
+                # Byte counters advance every poll, but throughput publishes
+                # only on this radio's emit cycle (phase-staggered). The
+                # reference spans the whole window so the published rate is its
+                # exact average; held between emits so the recorder dedupes.
+                rout = dict(self._radio_out.get(key, {}))  # carried forward
+                prev_b = self._prev_radio_bytes.get(key)
+                if prev_b is None:
+                    # First sighting: seed the reference (throughput stays None
+                    # until the first emit cycle, as before when prev was None).
+                    self._prev_radio_bytes[key] = (tx_b, rx_b, now)
+                elif self._emit_now(f"{mac}:{radio_idx}"):
+                    prev_tx_b, prev_rx_b, prev_b_time = prev_b
+                    dt_b = now - prev_b_time
+                    # round to integer B/s
+                    rout = {
+                        "tx_bps": round(v)
+                        if (v := _counter_rate(tx_b, prev_tx_b, dt_b)) is not None
+                        else None,
+                        "rx_bps": round(v)
+                        if (v := _counter_rate(rx_b, prev_rx_b, dt_b)) is not None
+                        else None,
+                    }
+                    self._radio_out[key] = rout
+                    self._prev_radio_bytes[key] = (tx_b, rx_b, now)
+                # else: hold — keep the prior reference and carried throughput.
+                tx_bps = rout.get("tx_bps")
+                rx_bps = rout.get("rx_bps")
+
+                # ── Frame / drop / interference rates: standard per-poll ───
                 tx_tot_ps = tx_mgmt_ps = tx_dat_ps = None
                 rx_tot_ps = rx_dat_ps = rx_mgmt_ps = None
-                prev = self._prev_radio_counters.get(key)
-                if prev is not None:
+                tx_drp_ps = rx_bad_ps = phy_evt_ps = None
+                prev_f = self._prev_radio_frames.get(key)
+                if prev_f is not None:
                     (
-                        prev_tx_b,
-                        prev_rx_b,
                         prev_tx_tot_f,
                         prev_tx_mgmt_f,
                         prev_tx_dat_f,
@@ -686,33 +756,19 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
                         prev_tx_drp,
                         prev_rx_bad,
                         prev_phy_evt,
-                        prev_time,
-                    ) = prev
-                    dt = now - prev_time
-                    # round to integer B/s
-                    tx_bps = (
-                        round(v)
-                        if (v := _counter_rate(tx_b, prev_tx_b, dt)) is not None
-                        else None
-                    )
-                    rx_bps = (
-                        round(v)
-                        if (v := _counter_rate(rx_b, prev_rx_b, dt)) is not None
-                        else None
-                    )
-                    tx_tot_ps = _counter_rate(tx_tot_f, prev_tx_tot_f, dt)
-                    tx_mgmt_ps = _counter_rate(tx_mgmt_f, prev_tx_mgmt_f, dt)
-                    tx_dat_ps = _counter_rate(tx_dat_f, prev_tx_dat_f, dt)
-                    rx_tot_ps = _counter_rate(rx_tot_f, prev_rx_tot_f, dt)
-                    rx_dat_ps = _counter_rate(rx_dat_f, prev_rx_dat_f, dt)
-                    rx_mgmt_ps = _counter_rate(rx_mgmt_f, prev_rx_mgmt_f, dt)
-                    tx_drp_ps = _counter_rate(tx_drp, prev_tx_drp, dt)
-                    rx_bad_ps = _counter_rate(rx_bad, prev_rx_bad, dt)
-                    phy_evt_ps = _counter_rate(phy_evt, prev_phy_evt, dt)
-
-                self._prev_radio_counters[key] = (
-                    tx_b,
-                    rx_b,
+                        prev_f_time,
+                    ) = prev_f
+                    dt_f = now - prev_f_time
+                    tx_tot_ps = _counter_rate(tx_tot_f, prev_tx_tot_f, dt_f)
+                    tx_mgmt_ps = _counter_rate(tx_mgmt_f, prev_tx_mgmt_f, dt_f)
+                    tx_dat_ps = _counter_rate(tx_dat_f, prev_tx_dat_f, dt_f)
+                    rx_tot_ps = _counter_rate(rx_tot_f, prev_rx_tot_f, dt_f)
+                    rx_dat_ps = _counter_rate(rx_dat_f, prev_rx_dat_f, dt_f)
+                    rx_mgmt_ps = _counter_rate(rx_mgmt_f, prev_rx_mgmt_f, dt_f)
+                    tx_drp_ps = _counter_rate(tx_drp, prev_tx_drp, dt_f)
+                    rx_bad_ps = _counter_rate(rx_bad, prev_rx_bad, dt_f)
+                    phy_evt_ps = _counter_rate(phy_evt, prev_phy_evt, dt_f)
+                self._prev_radio_frames[key] = (
                     tx_tot_f,
                     tx_mgmt_f,
                     tx_dat_f,
@@ -872,8 +928,13 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
         # Use BSSID presence as the anchor — only list fully-associated clients
         all_client_macs = set(cl_bssids) | set(cl_ips)
 
-        # Build fresh counters dict — only keeps entries for currently-seen clients
-        new_client_counters: dict[str, tuple[int, int, int, int, float]] = {}
+        # Build fresh counter dicts — only keep entries for currently-seen
+        # clients. Byte reference advances only on emit cycles (decimated
+        # throughput); retry reference advances every poll (per-poll rates).
+        new_client_counters: dict[str, tuple[int, int, float]] = {}
+        new_client_retry: dict[str, tuple[int, int, float]] = {}
+        # Carried-forward published rate/SNR values, pruned to current clients
+        new_client_out: dict[str, dict[str, Any]] = {}
         # Same pruning for stable client start times
         new_client_start: dict[str, datetime] = {}
 
@@ -904,45 +965,108 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
                             radio = ap.radios.get(radio_idx_r)
                             if radio and radio.channel:
                                 entry["channel"] = radio.channel
-            snr_raw = _as_int(cl_snrs.get(mac))
-            if snr_raw is not None:
-                entry["snr_db"] = snr_raw
+            # ── Decimated emit: throughput + instantaneous gauges ─────────
+            # These high-rate sensors publish only every Nth cycle (phase-
+            # staggered per MAC); the value is held between emits so the
+            # recorder dedupes it. tx/rx throughput is a counter delta over
+            # the whole window (the byte reference advances only on emit
+            # cycles → exact window average, no samples discarded). SNR
+            # publishes the mean of the window's samples; link speed publishes
+            # the latest sample seen in the window (real MCS rung, not a mean).
             tx = _as_int(cl_tx.get(mac))
             rx = _as_int(cl_rx.get(mac))
+            inst = {
+                "snr": _as_int(cl_snrs.get(mac)),
+                "speed": _as_int(cl_speeds.get(mac)),
+                "rx_speed": _as_int(cl_rx_rates.get(mac)),
+            }
+
+            out = dict(self._client_out.get(mac, {}))  # carried forward
+            acc = self._client_avg_acc.setdefault(mac, {})
+            for _m in _MEAN_GAUGES:
+                if (_v := inst[_m]) is not None:
+                    _s, _n = acc.get(_m, (0, 0))
+                    acc[_m] = (_s + _v, _n + 1)
+            for _m in _LATEST_GAUGES:
+                if (_v := inst[_m]) is not None:
+                    acc[_m] = _v  # last sample seen in the window wins
+
+            prev_cl = self._prev_client_counters.get(mac)
+            ref = prev_cl
+            if prev_cl is None:
+                # First sighting: seed the window reference and show the gauges
+                # right away so the sensors aren't blank until the first emit.
+                if tx is not None and rx is not None:
+                    ref = (tx, rx, now)
+                for _m, _v in inst.items():
+                    if _v is not None:
+                        out[_m] = _v
+                self._client_avg_acc[mac] = {}  # restart the window
+            elif self._emit_now(mac):
+                prev_tx, prev_rx, prev_ts = prev_cl
+                dt = now - prev_ts
+                if tx is not None and rx is not None and dt > 0:
+                    tx_delta = tx - prev_tx
+                    rx_delta = rx - prev_rx
+                    # round to integer B/s
+                    if tx_delta >= 0:
+                        out["tx_rate"] = round(tx_delta / dt)
+                    if rx_delta >= 0:
+                        out["rx_rate"] = round(rx_delta / dt)
+                for _m in _MEAN_GAUGES:
+                    _s, _n = acc.get(_m, (0, 0))
+                    if _n:
+                        out[_m] = round(_s / _n)
+                    elif inst[_m] is not None:
+                        out[_m] = inst[_m]
+                for _m in _LATEST_GAUGES:
+                    if (_v := acc.get(_m)) is not None:
+                        out[_m] = _v
+                self._client_avg_acc[mac] = {}  # window consumed
+                # Advance the window reference only on emit cycles.
+                if tx is not None and rx is not None:
+                    ref = (tx, rx, now)
+            # else: hold — keep the prior reference and carried-forward values.
+
+            # Retry rates: standard per-poll (reference advances every poll).
             tx_ret = _as_int(cl_tx_retries.get(mac))
             rx_ret = _as_int(cl_rx_retries.get(mac))
-            if tx is not None and rx is not None:
-                prev_cl = self._prev_client_counters.get(mac)
-                if prev_cl is not None:
-                    prev_tx, prev_rx, prev_tx_ret, prev_rx_ret, prev_ts = prev_cl
-                    dt = now - prev_ts
-                    if dt > 0:
-                        tx_delta = tx - prev_tx
-                        rx_delta = rx - prev_rx
-                        # round to integer B/s
-                        if tx_delta >= 0:
-                            entry["tx_rate"] = round(tx_delta / dt)
-                        if rx_delta >= 0:
-                            entry["rx_rate"] = round(rx_delta / dt)
-                        if tx_ret is not None:
-                            entry["tx_retry_rate"] = _counter_rate(
-                                tx_ret, prev_tx_ret, dt
-                            )
-                        if rx_ret is not None:
-                            entry["rx_retry_rate"] = _counter_rate(
-                                rx_ret, prev_rx_ret, dt
-                            )
-                new_client_counters[mac] = (tx, rx, tx_ret or 0, rx_ret or 0, now)
+            prev_ret = self._prev_client_retry.get(mac)
+            if prev_ret is not None:
+                prev_tx_ret, prev_rx_ret, prev_ret_ts = prev_ret
+                dt_ret = now - prev_ret_ts
+                if dt_ret > 0:
+                    if tx_ret is not None:
+                        entry["tx_retry_rate"] = _counter_rate(
+                            tx_ret, prev_tx_ret, dt_ret
+                        )
+                    if rx_ret is not None:
+                        entry["rx_retry_rate"] = _counter_rate(
+                            rx_ret, prev_rx_ret, dt_ret
+                        )
+            new_client_retry[mac] = (tx_ret or 0, rx_ret or 0, now)
+
+            for _k, _dst in (
+                ("snr", "snr_db"),
+                ("speed", "speed_mbps"),
+                ("rx_speed", "rx_speed_mbps"),
+                ("tx_rate", "tx_rate"),
+                ("rx_rate", "rx_rate"),
+            ):
+                if out.get(_k) is not None:
+                    entry[_dst] = out[_k]
+
+            new_client_out[mac] = out
+            if ref is not None:
+                new_client_counters[mac] = ref
             phy_raw = _as_int(cl_phy_types.get(mac))
             ht_raw = _as_int(cl_ht_modes.get(mac))
             if phy_raw is not None or ht_raw is not None:
                 entry["connection_type"] = _derive_connection_type(phy_raw, ht_raw)
             if ht_raw is not None:
                 entry["ht_mode_raw"] = ht_raw
-            if (speed := _as_int(cl_speeds.get(mac))) is not None:
-                entry["speed_mbps"] = speed
-            if (rx_rate := _as_int(cl_rx_rates.get(mac))) is not None:
-                entry["rx_speed_mbps"] = rx_rate
+            # speed_mbps / rx_speed_mbps are published via the decimated
+            # windowed-mean path above (instantaneous gauges).
             if (uptime_s := _ticks_to_seconds(cl_uptimes.get(mac))) is not None:
                 entry["uptime_seconds"] = uptime_s
                 # Derive a *stable* start time. `now_dt - uptime` jitters a
@@ -966,6 +1090,11 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
             clients.append(entry)
 
         self._prev_client_counters = new_client_counters
+        self._prev_client_retry = new_client_retry
+        self._client_out = new_client_out
+        self._client_avg_acc = {
+            m: v for m, v in self._client_avg_acc.items() if m in all_client_macs
+        }
         self._prev_client_start = new_client_start
 
         cluster_total_clients = sum(ap.total_clients for ap in aps.values())

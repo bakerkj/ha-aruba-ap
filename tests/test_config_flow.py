@@ -12,6 +12,7 @@ from custom_components.aruba_instant_ap.const import (
     CONF_COMMUNITY,
     CONF_HOST,
     CONF_MAC_HOSTNAME_FILE,
+    CONF_RECORD_DECIMATION,
     CONF_SNMP_PORT,
     CONF_UPDATE_INTERVAL,
     DEFAULT_SNMP_PORT,
@@ -139,6 +140,7 @@ async def test_reconfigure_all_options_persisted(hass):
                 CONF_SNMP_PORT: 1161,
                 "snmp_version": "v1",
                 CONF_UPDATE_INTERVAL: 30,
+                CONF_RECORD_DECIMATION: 4,
                 CONF_MAC_HOSTNAME_FILE: "/tmp/map.json",
                 CONF_CLIENTS_MAPPED_ONLY: True,
             },
@@ -147,6 +149,7 @@ async def test_reconfigure_all_options_persisted(hass):
     assert result["type"] == "abort"
     assert entry.options["snmp_version"] == "v1"
     assert entry.options[CONF_UPDATE_INTERVAL] == 30
+    assert entry.options[CONF_RECORD_DECIMATION] == 4
     assert entry.options[CONF_MAC_HOSTNAME_FILE] == "/tmp/map.json"
     assert entry.options[CONF_CLIENTS_MAPPED_ONLY] is True
 

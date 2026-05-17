@@ -18,6 +18,22 @@ CONF_CLIENTS_MAPPED_ONLY: Final = "clients_mapped_only"
 CONF_UPDATE_INTERVAL: Final = "update_interval"
 DEFAULT_UPDATE_INTERVAL: Final = 60
 
+# High-frequency sensors — client tx/rx throughput, radio tx/rx throughput,
+# SNR, and client tx/rx link speed — publish a new value only every Nth poll
+# cycle, phase-staggered per entity. Throughput is a counter delta whose
+# reference advances only on emit cycles → the published rate is the exact
+# average over the whole window (no samples discarded). SNR is an
+# instantaneous gauge → the mean of the samples collected during the window.
+# TX/RX link speed are instantaneous gauges on a discrete MCS ladder → the
+# latest real rung seen in the window (a mean would fabricate off-ladder
+# values and churn the recorder more).
+# Between emits the value is held so the recorder dedupes it. 1 publishes every
+# poll (decimation disabled); 2 ≈ halves recorder rows for these sensors with
+# no information loss on the throughput rates. Retry rates and the radio
+# per-frame sub-rates are unaffected (standard per-poll).
+CONF_RECORD_DECIMATION: Final = "record_decimation"
+DEFAULT_RECORD_DECIMATION: Final = 2
+
 # Aruba Networks Enterprise OID: 1.3.6.1.4.1.14823
 # Aruba Instant (AI-MIB) base: 1.3.6.1.4.1.14823.2.3.3.1
 _AI_BASE = "1.3.6.1.4.1.14823.2.3.3.1"

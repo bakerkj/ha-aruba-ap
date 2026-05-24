@@ -119,12 +119,17 @@ Commits must follow the
 release-please uses commit prefixes (`feat:`, `fix:`, etc.) to drive version
 bumps.
 
-After cloning, install the pre-commit hooks **including the commit-msg hook**
-(the default `pre-commit install` only wires up pre-commit-stage hooks):
+After cloning, install the hooks **including the commit-msg hook** (the default
+`prek install` only wires up pre-commit-stage hooks):
 
 ```
-uvx pre-commit install --hook-type pre-commit --hook-type commit-msg
+uvx prek install --overwrite --hook-type pre-commit --hook-type commit-msg
 ```
 
 Without `--hook-type commit-msg`, malformed commit messages won't be caught
 locally — CI (`Commitlint` workflow) will still reject them.
+
+`--overwrite` matters if you previously ran `pre-commit install`: without it,
+prek detects the existing hook, moves it to `pre-commit.legacy`, and **chains to
+it** — so the old pre-commit hook keeps running alongside prek. On a fresh clone
+there is no existing hook, so the flag is harmless.

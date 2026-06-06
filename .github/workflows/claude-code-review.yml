@@ -1,11 +1,5 @@
 name: Claude Code Review
 
-# Built from the action's pr-review-comprehensive.yml example rather than
-# the `code-review@claude-code-plugins` plugin, which has multiple open
-# upstream bugs (anthropics/claude-code-action #1383, #1308, #1087, #825).
-# See ha-weewx for the full rationale; the prompt body is the only piece
-# that meaningfully varies between repos.
-
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
@@ -53,44 +47,17 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            This is a Home Assistant custom integration that polls an
-            Aruba Instant AP cluster over SNMP (v1/v2c) and exposes
-            per-AP, per-radio, and per-client sensors. Code lives in
-            `custom_components/aruba_instant_ap/`; SNMP is via the
-            sync `puresnmp` library, so I/O has to be wrapped in HA's
-            executor.
+            This is a Home Assistant custom integration. Code lives
+            in `custom_components/aruba_instant_ap/`.
 
-            Review this PR for *real* issues. Prioritize, in order:
+            Review this PR. Prioritize, in order:
 
             1. Bugs — logic errors, race conditions, off-by-ones,
                broken edge cases. If you find one, leave an inline
                comment at the specific line.
-            2. HA integration correctness:
-               - Sync I/O (puresnmp, file reads, JSON parsing of the
-                 MAC->name file) must run via `async_add_executor_job`
-                 or `hass.async_add_executor_job`, NEVER on the event
-                 loop.
-               - DataUpdateCoordinator + CoordinatorEntity patterns
-                 for shared polling; one coordinator per AP cluster.
-               - Unique IDs stable across reboots/reconfigure flows.
-               - Device registry hierarchy: AP -> radio (via_device) ->
-                 client (via_device), with consistent identifiers.
-               - Config flow validation surfaces actionable errors
-                 (CannotConnect, InvalidAuth) rather than silently
-                 falling back.
-               - Update interval respects the documented minimum (10s)
-                 and default (60s).
-            3. SNMP correctness:
-               - Timeouts and retries set, exceptions caught at the
-                 right boundary (not swallowed entirely).
-               - OID walks bounded; large client tables don't block
-                 indefinitely.
-               - v1 vs v2c behavior differences honored.
-            4. Security:
-               - Community string never logged at INFO+ or written to
-                 diagnostics dumps.
-               - MAC->name JSON file path is the user's input — guard
-                 against traversal and unreadable files cleanly.
+            2. HA integration correctness.
+            3. SNMP correctness.
+            4. Security.
 
             Hard rules:
 

@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.0.15](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.14...v0.0.15) (2026-07-01)
+
+
+### Miscellaneous Chores
+
+* **deps:** pin dependencies ([#68](https://github.com/bakerkj/ha-aruba-ap/issues/68)) ([50c48d4](https://github.com/bakerkj/ha-aruba-ap/commit/50c48d4c1c1ffd0ca2ad2ebeee107b271f702993))
+* **deps:** update commitlint monorepo to v21 ([#62](https://github.com/bakerkj/ha-aruba-ap/issues/62)) ([6cd522a](https://github.com/bakerkj/ha-aruba-ap/commit/6cd522ab1c3d152ad9d6ef86805b49ee53f61279))
+* **deps:** update github-actions ([#54](https://github.com/bakerkj/ha-aruba-ap/issues/54)) ([6524f84](https://github.com/bakerkj/ha-aruba-ap/commit/6524f84872e20829bd1a625bd1cafece47978f25))
+* **deps:** update github-actions ([#71](https://github.com/bakerkj/ha-aruba-ap/issues/71)) ([cfcbe48](https://github.com/bakerkj/ha-aruba-ap/commit/cfcbe4823d88fcd49da076f7b5d93882ba6ee4c7))
+* **deps:** update github-actions ([#72](https://github.com/bakerkj/ha-aruba-ap/issues/72)) ([57861fb](https://github.com/bakerkj/ha-aruba-ap/commit/57861fb443361b555cd40ec0419571f5b632dd0a))
+* **deps:** update github-actions ([#74](https://github.com/bakerkj/ha-aruba-ap/issues/74)) ([fcaccf0](https://github.com/bakerkj/ha-aruba-ap/commit/fcaccf0808d8c268ed4de218b231ececdeff3a92))
+* **deps:** update github-actions ([#77](https://github.com/bakerkj/ha-aruba-ap/issues/77)) ([2daad8f](https://github.com/bakerkj/ha-aruba-ap/commit/2daad8f5f5be45c81549c8f34018eff4a46f06cb))
+* **deps:** update github-actions to v1.0.153 ([#70](https://github.com/bakerkj/ha-aruba-ap/issues/70)) ([624eefd](https://github.com/bakerkj/ha-aruba-ap/commit/624eefdbff4eecb460dc82a497d5176491fde029))
+* **deps:** update github-actions to v7 ([#65](https://github.com/bakerkj/ha-aruba-ap/issues/65)) ([3c7b73b](https://github.com/bakerkj/ha-aruba-ap/commit/3c7b73b897855d478f2ab120bbf418190e35aba5))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.15.14 ([#46](https://github.com/bakerkj/ha-aruba-ap/issues/46)) ([d809480](https://github.com/bakerkj/ha-aruba-ap/commit/d80948039a914a830693d21cf7ae96a67cf6f7ac))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.15.15 ([#52](https://github.com/bakerkj/ha-aruba-ap/issues/52)) ([b0b77b6](https://github.com/bakerkj/ha-aruba-ap/commit/b0b77b619413b90299da48889652bd90fa2dad4d))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.15.20 ([#75](https://github.com/bakerkj/ha-aruba-ap/issues/75)) ([5f97201](https://github.com/bakerkj/ha-aruba-ap/commit/5f972017d48144d15d450f459ca5c0a7978aae39))
+* **deps:** update pre-commit hook rbubley/mirrors-prettier to v3.9.4 ([#78](https://github.com/bakerkj/ha-aruba-ap/issues/78)) ([e510c56](https://github.com/bakerkj/ha-aruba-ap/commit/e510c56f4a581580cf11c53f4f8cb18395aca49c))
+* **deps:** update pre-commit hooks ([#63](https://github.com/bakerkj/ha-aruba-ap/issues/63)) ([af55747](https://github.com/bakerkj/ha-aruba-ap/commit/af55747c3e44236b6da918f82da48155c9668051))
+* **deps:** update pre-commit hooks ([#73](https://github.com/bakerkj/ha-aruba-ap/issues/73)) ([fe2633c](https://github.com/bakerkj/ha-aruba-ap/commit/fe2633c8f7dc8319e8050ee1f5e75051941949fa))
+* **deps:** update pre-commit hooks ([#76](https://github.com/bakerkj/ha-aruba-ap/issues/76)) ([c6a3eb9](https://github.com/bakerkj/ha-aruba-ap/commit/c6a3eb99baf6220220fcde0f7757324de71d4e3a))
+* **deps:** update pre-commit hooks to v0.15.16 ([#55](https://github.com/bakerkj/ha-aruba-ap/issues/55)) ([284240c](https://github.com/bakerkj/ha-aruba-ap/commit/284240c5e19adcad8bb0f38f8cc25d807805f3b8))
+* **deps:** update pre-commit hooks to v0.15.18 ([#64](https://github.com/bakerkj/ha-aruba-ap/issues/64)) ([e9d1bc5](https://github.com/bakerkj/ha-aruba-ap/commit/e9d1bc5d318ecd32ddfae0b73e4514a07b6209b8))
+* normalize workflow file extensions to .yaml ([#69](https://github.com/bakerkj/ha-aruba-ap/issues/69)) ([17dcc55](https://github.com/bakerkj/ha-aruba-ap/commit/17dcc5558cb594542940201ac1a7009a77a2d748))
+* pin GitHub Actions to triple-digit tags ([#66](https://github.com/bakerkj/ha-aruba-ap/issues/66)) ([178e2df](https://github.com/bakerkj/ha-aruba-ap/commit/178e2df3ca38be7e97d9edbf5c7a795e20b98ead))
+* pin uv to ==0.11.* and let Renovate track it ([#61](https://github.com/bakerkj/ha-aruba-ap/issues/61)) ([cbef619](https://github.com/bakerkj/ha-aruba-ap/commit/cbef619d5d2aac71972c06dc605b4f29e234ee56))
+* **renovate:** pin GitHub Action digests to semver ([#67](https://github.com/bakerkj/ha-aruba-ap/issues/67)) ([a25177f](https://github.com/bakerkj/ha-aruba-ap/commit/a25177f16da584af7557fa47b284b9055f07a4c7))
+
+
+### Continuous Integration
+
+* add fix-byte-order-marker and check-illegal-windows-names builtins ([#51](https://github.com/bakerkj/ha-aruba-ap/issues/51)) ([b60940b](https://github.com/bakerkj/ha-aruba-ap/commit/b60940b75ea3818fe7f591ece9a831a790937577))
+* add HACS token and move ruff to py314 (inferred) ([#47](https://github.com/bakerkj/ha-aruba-ap/issues/47)) ([f3ca846](https://github.com/bakerkj/ha-aruba-ap/commit/f3ca846c0ec89fb6d23aa542c88962edede71687))
+* **claude:** add Claude Code GitHub workflows ([#56](https://github.com/bakerkj/ha-aruba-ap/issues/56)) ([71b130f](https://github.com/bakerkj/ha-aruba-ap/commit/71b130ff843750f2dd5a0a6b7b9c82fe79e7a714))
+* **claude:** strip review prompt to repo description + two categories ([#58](https://github.com/bakerkj/ha-aruba-ap/issues/58)) ([625633c](https://github.com/bakerkj/ha-aruba-ap/commit/625633cfcd554d5bf00bf41a9e6e288a5a6422a7))
+* drop python-version-file from setup-uv steps ([#60](https://github.com/bakerkj/ha-aruba-ap/issues/60)) ([a4a610d](https://github.com/bakerkj/ha-aruba-ap/commit/a4a610d405670283a2117abe3349f040263f6440))
+* **prek:** cache prek hook envs across runs ([#53](https://github.com/bakerkj/ha-aruba-ap/issues/53)) ([e15662e](https://github.com/bakerkj/ha-aruba-ap/commit/e15662e5899a047a97acfb29c497b39bde73cd31))
+* **renovate:** track npm packages in pre-commit additional_dependencies ([#57](https://github.com/bakerkj/ha-aruba-ap/issues/57)) ([b741bb8](https://github.com/bakerkj/ha-aruba-ap/commit/b741bb881f00c5cc6db14975add55d8c9d70cf7f))
+* transition pre-commit to prek ([#49](https://github.com/bakerkj/ha-aruba-ap/issues/49)) ([ee18610](https://github.com/bakerkj/ha-aruba-ap/commit/ee1861075f396660e8d354ad299fcf44d16cabdf))
+* use prek built-in hooks instead of pre-commit-hooks ([#50](https://github.com/bakerkj/ha-aruba-ap/issues/50)) ([c69bdaa](https://github.com/bakerkj/ha-aruba-ap/commit/c69bdaa176c50aa81cf0a5160a51487573933186))
+* use python-version-file in tests + mypy workflows ([#59](https://github.com/bakerkj/ha-aruba-ap/issues/59)) ([0bdfdba](https://github.com/bakerkj/ha-aruba-ap/commit/0bdfdbae95b9d9a3da8a1d1283d533eed07aadf9))
+
 ## [0.0.14](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.13...v0.0.14) (2026-05-17)
 
 

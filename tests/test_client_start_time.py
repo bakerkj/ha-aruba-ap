@@ -10,7 +10,7 @@ and only move on a real change (reconnect / clock correction).  Stale clients
 must also be pruned from the tracking dict so it can't grow unbounded.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from custom_components.aruba_instant_ap.const import (
@@ -25,7 +25,7 @@ from custom_components.aruba_instant_ap.sensor import (
 _CLIENT_MAC = "aa:bb:cc:11:22:33"
 # Client table is indexed by the 6-octet MAC suffix (parsed tail=True).
 _MAC_SUFFIX = ".".join(str(int(b, 16)) for b in _CLIENT_MAC.split(":"))
-_BASE = datetime(2026, 5, 17, 12, 0, 0, tzinfo=timezone.utc)
+_BASE = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
 
 def _walk(uptime_seconds: int | None):

@@ -3,9 +3,9 @@
 
 """Tests for cluster-level sensor aggregation (ArubaClusterData totals)."""
 
-import pytest
-
 from collections.abc import Callable
+
+import pytest
 
 from custom_components.aruba_instant_ap.sensor import (
     ArubaClusterData,

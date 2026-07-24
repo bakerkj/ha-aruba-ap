@@ -5,6 +5,11 @@
 
 import pytest
 
+from custom_components.aruba_instant_ap.const import (
+    OID_AP_NAME,
+    OID_CLIENT_HOSTNAME,
+    OID_RADIO_CHANNEL,
+)
 from custom_components.aruba_instant_ap.sensor import (
     _as_int,
     _client_display_name,
@@ -19,11 +24,6 @@ from custom_components.aruba_instant_ap.sensor import (
     _parse_radio_table,
     _safe_walk,
     _ticks_to_seconds,
-)
-from custom_components.aruba_instant_ap.const import (
-    OID_AP_NAME,
-    OID_CLIENT_HOSTNAME,
-    OID_RADIO_CHANNEL,
 )
 
 # ── _as_int ───────────────────────────────────────────────────────────────────

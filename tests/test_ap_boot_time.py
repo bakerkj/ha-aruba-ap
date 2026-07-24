@@ -14,7 +14,7 @@ pruned — the AP set in a cluster is small and stable, so there is no unbounded
 growth to guard against (hence no pruning test here).
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from custom_components.aruba_instant_ap.const import (
@@ -29,7 +29,7 @@ from custom_components.aruba_instant_ap.sensor import (
 _AP_MAC = "aa:bb:cc:44:55:66"
 # AP table is indexed by the 6-octet MAC suffix (parsed tail=False).
 _MAC_SUFFIX = ".".join(str(int(b, 16)) for b in _AP_MAC.split(":"))
-_BASE = datetime(2026, 5, 17, 12, 0, 0, tzinfo=timezone.utc)
+_BASE = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
 
 def _walk(uptime_seconds: int | None):

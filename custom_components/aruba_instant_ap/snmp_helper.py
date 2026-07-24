@@ -9,7 +9,8 @@ import asyncio
 import logging
 from functools import partial
 
-from puresnmp import Client, V1, V2C
+from puresnmp import V1, V2C, Client
+from puresnmp.exc import SnmpError
 from puresnmp.transport import send_udp
 from x690.types import ObjectIdentifier, OctetString
 
@@ -34,7 +35,8 @@ def _prewarm_plugins() -> None:
     pre-populated ``Loader`` instance, so no further filesystem I/O occurs.
     """
     from puresnmp.exc import UnknownMessageProcessingModel, UnknownSecurityModel
-    from puresnmp.plugins import mpm as _mpm, security as _sec
+    from puresnmp.plugins import mpm as _mpm
+    from puresnmp.plugins import security as _sec
     from puresnmp.plugins.pluginbase import Loader, discover_plugins
 
     # ── MPM plugins ──────────────────────────────────────────────────────────
@@ -147,7 +149,7 @@ async def async_snmp_get(
         return _value_to_str(value)
     except asyncio.CancelledError:
         raise
-    except Exception as exc:
+    except (OSError, TimeoutError, SnmpError) as exc:
         _LOGGER.debug("SNMP GET failed on %s (oid=%s): %s", host, oid, exc)
         return None
 
@@ -189,6 +191,6 @@ async def async_snmp_walk(
             results[oid_str] = _value_to_str(vb.value)
     except asyncio.CancelledError:
         raise
-    except Exception as exc:
+    except (OSError, TimeoutError, SnmpError) as exc:
         _LOGGER.debug("SNMP WALK failed on %s (%s): %s", host, base_oid, exc)
     return results

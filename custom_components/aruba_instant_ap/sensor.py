@@ -24,13 +24,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfDataRate, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry
-from homeassistant.util import dt as dt_util, slugify
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
+from homeassistant.util import slugify
 
 from .const import (
     CLIENT_PHY_TYPE_MAP,
+    DEFAULT_RECORD_DECIMATION,
     DOMAIN,
     OID_AP_CPU_USAGE,
     OID_AP_IP,
@@ -47,8 +49,8 @@ from .const import (
     OID_BSS_SSID,
     OID_CLIENT_BSSID,
     OID_CLIENT_HOSTNAME,
-    OID_CLIENT_IP,
     OID_CLIENT_HT_MODE,
+    OID_CLIENT_IP,
     OID_CLIENT_OS,
     OID_CLIENT_PHY_TYPE,
     OID_CLIENT_RX_BYTES,
@@ -74,11 +76,10 @@ from .const import (
     OID_RADIO_TX_DATA_FRAMES,
     OID_RADIO_TX_DROPPED,
     OID_RADIO_TX_MGMT,
-    OID_RADIO_TX_TOTAL_FRAMES,
     OID_RADIO_TX_POWER,
+    OID_RADIO_TX_TOTAL_FRAMES,
     OID_RADIO_UTILIZATION,
     OID_RADIO_UTILIZATION64,
-    DEFAULT_RECORD_DECIMATION,
 )
 from .snmp_helper import async_snmp_walk
 
@@ -300,10 +301,7 @@ def _hex_to_mac(hex_str: str | None) -> str | None:
     s = s.lower()
     if len(s) != 12:
         return None
-    try:
-        return ":".join(s[i : i + 2] for i in range(0, 12, 2))
-    except Exception:
-        return None
+    return ":".join(s[i : i + 2] for i in range(0, 12, 2))
 
 
 def _ticks_to_seconds(v: str | None) -> int | None:
@@ -465,7 +463,7 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
             except FileNotFoundError:
                 _LOGGER.debug("MAC hostname file not found: %s", self.mac_hostname_file)
                 return {}
-            except Exception as err:
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as err:
                 _LOGGER.warning(
                     "Failed to load MAC hostname file %s: %s",
                     self.mac_hostname_file,

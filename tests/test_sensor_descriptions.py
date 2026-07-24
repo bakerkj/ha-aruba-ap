@@ -17,12 +17,12 @@ import pytest
 
 from custom_components.aruba_instant_ap.sensor import (
     AP_SENSOR_DESCRIPTIONS,
+    CLIENT_SENSOR_DESCRIPTIONS,
+    RADIO_SENSOR_DESCRIPTIONS,
     APSensor,
     APSensorDescription,
-    CLIENT_SENSOR_DESCRIPTIONS,
     ClientSensor,
     ClientSensorDescription,
-    RADIO_SENSOR_DESCRIPTIONS,
     RadioSensor,
     RadioSensorDescription,
 )

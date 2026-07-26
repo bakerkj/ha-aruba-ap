@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.16](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.15...v0.0.16) (2026-07-26)
+
+
+### Miscellaneous Chores
+
+* **deps:** update anthropics/claude-code-action action to v1.0.183 ([8ca2525](https://github.com/bakerkj/ha-aruba-ap/commit/8ca2525b38796e692fcbcb9b008d69ba03ae3497))
+* **deps:** update anthropics/claude-code-action action to v1.0.183 ([6583b0a](https://github.com/bakerkj/ha-aruba-ap/commit/6583b0a2e7eb9dc8f446fe806b560bdc7d1d354a))
+
+
+### Continuous Integration
+
+* validate manifest via hassfest, drop core-schema pre-commit hook ([6f1223f](https://github.com/bakerkj/ha-aruba-ap/commit/6f1223f1493ebbd7f5dcc120ed0df6f110211a03))
+* validate manifest with hassfest, drop core-schema pre-commit hook ([c9bb4c7](https://github.com/bakerkj/ha-aruba-ap/commit/c9bb4c74e6ec140e31c3c44ebdbf79ae75d988c2))
+
 ## [0.0.15](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.14...v0.0.15) (2026-07-24)
 
 

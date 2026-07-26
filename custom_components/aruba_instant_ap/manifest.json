@@ -1,13 +1,14 @@
 {
   "domain": "aruba_instant_ap",
   "name": "Aruba Instant AP",
-  "codeowners": [],
+  "codeowners": [
+    "@bakerkj"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/bakerkj/ha-aruba-ap",
-  "issue_tracker": "https://github.com/bakerkj/ha-aruba-ap/issues",
   "integration_type": "device",
   "iot_class": "local_polling",
-  "homeassistant": "2026.4.0",
+  "issue_tracker": "https://github.com/bakerkj/ha-aruba-ap/issues",
   "requirements": [
     "puresnmp>=2.0.0"
   ],

@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.0.17](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.16...v0.0.17) (2026-08-14)
+
+
+### Features
+
+* expose per-client connectivity and publish the client MAC ([#118](https://github.com/bakerkj/ha-aruba-ap/issues/118)) ([ed8368b](https://github.com/bakerkj/ha-aruba-ap/commit/ed8368ba585d0b1cabbc026ae9cc0210afd511b7))
+
+
+### Bug Fixes
+
+* **pre-commit:** set default_stages so hooks skip commit-msg by default ([#108](https://github.com/bakerkj/ha-aruba-ap/issues/108)) ([6532a8f](https://github.com/bakerkj/ha-aruba-ap/commit/6532a8fd9c98a176c16c5780028f06b4d087e5e6))
+
+
+### Miscellaneous Chores
+
+* **deps:** pin uv to 0.12.2 ([#107](https://github.com/bakerkj/ha-aruba-ap/issues/107)) ([058356b](https://github.com/bakerkj/ha-aruba-ap/commit/058356b911db5a95144bf9ca498ecdea6b20909a))
+* **deps:** update anthropics/claude-code-action action to v1.0.184 ([#109](https://github.com/bakerkj/ha-aruba-ap/issues/109)) ([9b017ac](https://github.com/bakerkj/ha-aruba-ap/commit/9b017ac1c85d0b9c09ab07d5f6c32a8da38781cf))
+* **deps:** update anthropics/claude-code-action action to v1.0.190 ([#116](https://github.com/bakerkj/ha-aruba-ap/issues/116)) ([bc0c55e](https://github.com/bakerkj/ha-aruba-ap/commit/bc0c55ea60e0b210282967c591d647a3e1e778b5))
+* **deps:** update astral-sh/setup-uv action to v10 ([#112](https://github.com/bakerkj/ha-aruba-ap/issues/112)) ([bdc4dbb](https://github.com/bakerkj/ha-aruba-ap/commit/bdc4dbbecdac7cc339fcc421a80ea72bfc1352f8))
+* **deps:** update dependency uv to ==0.12.* ([1b3076c](https://github.com/bakerkj/ha-aruba-ap/commit/1b3076ca8744dce558105bffa3de9a6160089b63))
+* **deps:** update dependency uv to ==0.12.* ([f6cebcd](https://github.com/bakerkj/ha-aruba-ap/commit/f6cebcdbc4288d579f201f10db213b0007c278c9))
+* **deps:** update dependency uv to v0.12.3 ([#114](https://github.com/bakerkj/ha-aruba-ap/issues/114)) ([1b79be2](https://github.com/bakerkj/ha-aruba-ap/commit/1b79be23166f3caa2d4f8cd90a72d4ef45013cec))
+* **deps:** update dependency uv to v0.12.4 ([#115](https://github.com/bakerkj/ha-aruba-ap/issues/115)) ([2c7be3d](https://github.com/bakerkj/ha-aruba-ap/commit/2c7be3d2c7a3cc1fa642f5540f905e48bcd502e4))
+* **deps:** update github-actions ([#110](https://github.com/bakerkj/ha-aruba-ap/issues/110)) ([50ba772](https://github.com/bakerkj/ha-aruba-ap/commit/50ba7724e1336a559db6fe74a2b3e106f4ac1445))
+* **deps:** update github-actions ([#117](https://github.com/bakerkj/ha-aruba-ap/issues/117)) ([12ea555](https://github.com/bakerkj/ha-aruba-ap/commit/12ea555b3023cb3b1737cfbbaee6a51405c44e03))
+* **deps:** update home-assistant/actions digest to ab22029 ([8f6ef17](https://github.com/bakerkj/ha-aruba-ap/commit/8f6ef17d146650ccc66802b4c57528c82e4c2bd1))
+* **deps:** update home-assistant/actions digest to ab22029 ([8ad1c3b](https://github.com/bakerkj/ha-aruba-ap/commit/8ad1c3be70d7a6e4c0a8d5de7598d8a239ed3be0))
+* **deps:** update j178/prek-action action to v3 ([d44e713](https://github.com/bakerkj/ha-aruba-ap/commit/d44e713b5c70ca067b22e87f72813d49b7b3d7c7))
+* **deps:** update j178/prek-action action to v3 ([eec2c32](https://github.com/bakerkj/ha-aruba-ap/commit/eec2c320b95c5ed17a80a61d7102911eae916eb4))
+* **deps:** update pre-commit hook aleksac/hadolint-py to v2.15.1 ([#106](https://github.com/bakerkj/ha-aruba-ap/issues/106)) ([dcd93bc](https://github.com/bakerkj/ha-aruba-ap/commit/dcd93bcb476c19b0027a3a116c03252d54b47cff))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.16.1 ([87bc306](https://github.com/bakerkj/ha-aruba-ap/commit/87bc30673ad34bb00722bc7cb8c196a5fd5c9f12))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.16.1 ([bee320d](https://github.com/bakerkj/ha-aruba-ap/commit/bee320d0f5e8c8cdc7d72fe9f96885e8c52573c2))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.16.3 ([#113](https://github.com/bakerkj/ha-aruba-ap/issues/113)) ([1a66bf0](https://github.com/bakerkj/ha-aruba-ap/commit/1a66bf0b6ef53e1566f6196a94aa571f24ade155))
+* **deps:** update pre-commit hooks ([#111](https://github.com/bakerkj/ha-aruba-ap/issues/111)) ([2085c8f](https://github.com/bakerkj/ha-aruba-ap/commit/2085c8f166733dd87598e9cf4f4ead7f63806cd7))
+
+
+### Continuous Integration
+
+* enable renovate auto-merge for CI-only updates ([#105](https://github.com/bakerkj/ha-aruba-ap/issues/105)) ([f32ee6a](https://github.com/bakerkj/ha-aruba-ap/commit/f32ee6ad07d9fac103134d07f78cd09f33f6d452))
+
 ## [0.0.16](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.15...v0.0.16) (2026-07-26)
 
 

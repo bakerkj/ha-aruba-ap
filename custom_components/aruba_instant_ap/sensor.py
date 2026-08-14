@@ -81,6 +81,7 @@ from .const import (
     OID_RADIO_UTILIZATION,
     OID_RADIO_UTILIZATION64,
 )
+from .entity import ArubaEntityMixin
 from .snmp_helper import async_snmp_walk
 
 _LOGGER = logging.getLogger(__name__)
@@ -1431,36 +1432,8 @@ CLIENT_SENSOR_DESCRIPTIONS: tuple[ClientSensorDescription, ...] = (
 # =============================================================================
 
 
-class ArubaBaseEntity(SensorEntity):
+class ArubaBaseEntity(ArubaEntityMixin, SensorEntity):
     """Shared base for all Aruba AP sensor entities."""
-
-    _attr_has_entity_name = True
-    _attr_should_poll = False
-
-    def __init__(self, coordinator: ArubaAPCoordinator) -> None:
-        self.coordinator = coordinator
-        self._unsub: Callable[[], None] | None = None
-
-    @property
-    def available(self) -> bool:
-        return (
-            self.coordinator.last_update_success and self.coordinator.data is not None
-        )
-
-    async def async_added_to_hass(self) -> None:
-        await super().async_added_to_hass()
-        self._unsub = self.coordinator.async_add_listener(
-            self._handle_coordinator_update
-        )
-
-    async def async_will_remove_from_hass(self) -> None:
-        if self._unsub is not None:
-            self._unsub()
-        await super().async_will_remove_from_hass()
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        self.async_write_ha_state()
 
 
 # =============================================================================
@@ -1809,6 +1782,29 @@ def _client_display_name(client: dict[str, Any] | None, mac: str) -> str:
     return f"{name} / {mac}" if name else mac
 
 
+def client_device_info(
+    entry_id: str,
+    mac: str,
+    name: str,
+    via_device: tuple[str, str] | None,
+) -> DeviceInfo:
+    """The device a client's entities belong to.
+
+    The MAC goes in ``connections`` as well as the identifier: it is the key
+    the device registry matches on, so publishing it lets an integration that
+    knows the same hardware by address share the device rather than opening a
+    second row for it.
+    """
+    info = DeviceInfo(
+        identifiers={(DOMAIN, f"{entry_id}_client_{_mac_slug(mac)}")},
+        connections={(device_registry.CONNECTION_NETWORK_MAC, mac)},
+        name=name,
+    )
+    if via_device is not None:
+        info["via_device"] = via_device
+    return info
+
+
 class ClientSensor(ArubaBaseEntity):
     """One sensor for one attribute of one WiFi client."""
 
@@ -1837,15 +1833,10 @@ class ClientSensor(ArubaBaseEntity):
             self.entity_id = f"sensor.{slugify(name)}_{description.key}"
         else:
             self.entity_id = f"sensor.client_{mac_slug}_{description.key}"
-        identifiers = {(DOMAIN, f"{entry_id}_client_{_mac_slug(mac)}")}
         name = _client_display_name(client, mac)
-        via_device = self._radio_via_device(client)
-        if via_device is None:
-            self._attr_device_info = DeviceInfo(identifiers=identifiers, name=name)
-        else:
-            self._attr_device_info = DeviceInfo(
-                identifiers=identifiers, name=name, via_device=via_device
-            )
+        self._attr_device_info = client_device_info(
+            entry_id, mac, name, self._radio_via_device(client)
+        )
 
     def _find_client(
         self, coordinator: ArubaAPCoordinator | None = None

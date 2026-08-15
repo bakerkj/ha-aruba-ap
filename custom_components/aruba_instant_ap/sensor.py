@@ -32,6 +32,7 @@ from homeassistant.util import slugify
 
 from .const import (
     CLIENT_PHY_TYPE_MAP,
+    CONNECTION_CLIENT_MAC,
     DEFAULT_RECORD_DECIMATION,
     DOMAIN,
     OID_AP_CPU_USAGE,
@@ -80,6 +81,7 @@ from .const import (
     OID_RADIO_TX_TOTAL_FRAMES,
     OID_RADIO_UTILIZATION,
     OID_RADIO_UTILIZATION64,
+    SPLIT_REGISTRY,
 )
 from .entity import ArubaEntityMixin
 from .snmp_helper import async_snmp_walk
@@ -1790,14 +1792,22 @@ def client_device_info(
 ) -> DeviceInfo:
     """The device a client's entities belong to.
 
-    The MAC goes in ``connections`` as well as the identifier: it is the key
-    the device registry matches on, so publishing it lets an integration that
-    knows the same hardware by address share the device rather than opening a
-    second row for it.
+    The client's address is always published, under our own connection type, so
+    a reader can tell which hardware this row describes.
+
+    The *standard* ``mac`` type is added only from 2026.8. Below that the
+    registry merges devices that share a connection, and integrations that
+    register by address alone -- esphome among them -- resolve to whichever row
+    already holds it; publishing the standard type there pulls their devices
+    onto ours, taking their entities, names and areas with them. The registry
+    matches exact ``(type, value)`` tuples, so our own type cannot collide.
     """
+    connections = {(CONNECTION_CLIENT_MAC, mac)}
+    if SPLIT_REGISTRY:
+        connections.add((device_registry.CONNECTION_NETWORK_MAC, mac))
     info = DeviceInfo(
         identifiers={(DOMAIN, f"{entry_id}_client_{_mac_slug(mac)}")},
-        connections={(device_registry.CONNECTION_NETWORK_MAC, mac)},
+        connections=connections,
         name=name,
     )
     if via_device is not None:

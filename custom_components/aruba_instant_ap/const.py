@@ -5,7 +5,21 @@
 
 from typing import Final
 
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
+
 DOMAIN: Final = "aruba_instant_ap"
+
+# 2026.8 scoped the device registry to one config entry per device. Before it,
+# a shared connection MERGES two integrations' devices into one row; from it,
+# the same connection links them while each keeps its own row. Anything that
+# publishes a hardware address another integration may also know has to care
+# which of those two registries it is running on.
+SPLIT_REGISTRY: Final = (MAJOR_VERSION, MINOR_VERSION) >= (2026, 8)
+
+# Our own connection type for a client's address. The registry matches exact
+# (type, value) tuples, so this carries the MAC on every HA version without
+# ever colliding with another integration's standard ``mac`` connection.
+CONNECTION_CLIENT_MAC: Final = f"{DOMAIN}_mac"
 
 # Config entry keys
 CONF_HOST: Final = "host"

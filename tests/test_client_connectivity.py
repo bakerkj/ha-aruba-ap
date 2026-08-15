@@ -10,7 +10,6 @@ the on/off reading a monitor can act upon.
 
 from unittest.mock import MagicMock
 
-import pytest
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -19,7 +18,11 @@ from custom_components.aruba_instant_ap.binary_sensor import (
     ClientConnectivity,
     async_setup_entry,
 )
-from custom_components.aruba_instant_ap.const import DOMAIN
+from custom_components.aruba_instant_ap.const import (
+    CONNECTION_CLIENT_MAC,
+    DOMAIN,
+    SPLIT_REGISTRY,
+)
 from custom_components.aruba_instant_ap.sensor import (
     CLIENT_SENSOR_DESCRIPTIONS,
     ClientSensor,
@@ -138,14 +141,15 @@ async def test_no_duplicates_on_repeated_coordinator_updates(hass):
 # ── the MAC connection ───────────────────────────────────────────────────────
 
 
-async def test_client_device_carries_the_mac_connection(hass):
-    """Both platforms describe the client device with its MAC in connections."""
+async def test_address_is_always_published_under_our_own_type(hass):
+    """Both platforms describe the client device with its address, on every HA
+    version, under the type that cannot collide with anyone else's."""
     coord = _make_coordinator()
     binary = (await _setup(hass, coord))[0]
     sensor = ClientSensor(coord, "test_entry", _MAC, CLIENT_SENSOR_DESCRIPTIONS[0])
-    expected = {(dr.CONNECTION_NETWORK_MAC, _MAC)}
-    assert binary.device_info["connections"] == expected
-    assert sensor.device_info["connections"] == expected
+    ours = (CONNECTION_CLIENT_MAC, _MAC)
+    assert ours in binary.device_info["connections"]
+    assert ours in sensor.device_info["connections"]
     assert (
         binary.device_info["identifiers"]
         == sensor.device_info["identifiers"]
@@ -153,16 +157,24 @@ async def test_client_device_carries_the_mac_connection(hass):
     )
 
 
-async def _register_beside_an_existing_device(hass):
-    """Register our client device where another integration already claimed the
-    MAC. Returns (theirs, ours)."""
+async def test_standard_mac_type_only_from_2026_8(hass):
+    """The standard ``mac`` type merges devices below 2026.8, so it is published
+    only where the registry keeps each integration's view separate."""
+    binary = (await _setup(hass, _make_coordinator()))[0]
+    published = (dr.CONNECTION_NETWORK_MAC, _MAC) in binary.device_info["connections"]
+    assert published is SPLIT_REGISTRY
+
+
+async def _register_beside_an_existing_device(hass, *, their_connections):
+    """Register our client device beside another integration's device for the
+    same hardware. Returns (theirs, ours)."""
     reg = dr.async_get(hass)
-    other = MockConfigEntry(domain="smartthinq_sensors")
+    other = MockConfigEntry(domain="esphome")
     other.add_to_hass(hass)
     theirs = reg.async_get_or_create(
         config_entry_id=other.entry_id,
-        identifiers={("smartthinq_sensors", "appliance-uuid")},
-        connections={(dr.CONNECTION_NETWORK_MAC, _MAC)},
+        connections=their_connections,
+        name="Their Name",
     )
     ours_entry = MockConfigEntry(domain=DOMAIN, entry_id="test_entry")
     ours_entry.add_to_hass(hass)
@@ -173,27 +185,33 @@ async def _register_beside_an_existing_device(hass):
     return theirs, ours
 
 
-# HA 2026.8 stopped merging devices across config entries: a device is one
-# entry's view of a thing. The MAC is worth publishing either way — before the
-# split it shares the row, after it, it is the key that rejoins the two.
-_SPLIT_REGISTRY = hasattr(dr.DeviceEntry, "config_entry_id")
+async def test_does_not_merge_a_device_that_registers_by_address_alone(hass):
+    """The regression this release exists for.
+
+    esphome registers its devices with a MAC connection and no identifier. Below
+    2026.8 a shared connection merges rows, so publishing the standard type drew
+    those devices onto ours -- moving their entities, names and areas. Our own
+    connection type must never do that, on any version.
+    """
+    theirs, ours = await _register_beside_an_existing_device(
+        hass, their_connections={(dr.CONNECTION_NETWORK_MAC, _MAC)}
+    )
+    assert ours.id != theirs.id  # separate rows
+    assert theirs.name == "Their Name"  # their name is untouched
+    assert (CONNECTION_CLIENT_MAC, _MAC) in ours.connections
 
 
-@pytest.mark.skipif(_SPLIT_REGISTRY, reason="2026.8+ keeps the views separate")
-async def test_mac_connection_merges_into_an_existing_device(hass):
-    """Below 2026.8 the registry merges on the connection, so the client's
-    entities land on the device that already represents the hardware."""
-    theirs, ours = await _register_beside_an_existing_device(hass)
-    assert ours.id == theirs.id
-    assert ("smartthinq_sensors", "appliance-uuid") in ours.identifiers
+async def test_a_reader_can_still_pair_the_two_rows(hass):
+    """Separate rows are only useful if the address still links them."""
+    theirs, ours = await _register_beside_an_existing_device(
+        hass, their_connections={(dr.CONNECTION_NETWORK_MAC, _MAC)}
+    )
 
+    def addresses(device):
+        return {
+            value.lower()
+            for kind, value in device.connections
+            if kind in (dr.CONNECTION_NETWORK_MAC, CONNECTION_CLIENT_MAC)
+        }
 
-@pytest.mark.skipif(not _SPLIT_REGISTRY, reason="pre-2026.8 merges instead")
-async def test_mac_connection_is_the_key_that_rejoins_after_the_split(hass):
-    """From 2026.8 the two views stay separate — but both carry the MAC, which
-    is what lets a consumer pair them back up."""
-    theirs, ours = await _register_beside_an_existing_device(hass)
-    assert ours.id != theirs.id
-    mac = (dr.CONNECTION_NETWORK_MAC, _MAC)
-    assert mac in ours.connections
-    assert mac in theirs.connections
+    assert addresses(ours) == addresses(theirs) == {_MAC}

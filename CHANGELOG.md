@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.18](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.17...v0.0.18) (2026-08-15)
+
+
+### Bug Fixes
+
+* do not publish the standard MAC type below 2026.8 ([#119](https://github.com/bakerkj/ha-aruba-ap/issues/119)) ([879730e](https://github.com/bakerkj/ha-aruba-ap/commit/879730ef0aec594afada7ece004ac135602a0ecb))
+
 ## [0.0.17](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.16...v0.0.17) (2026-08-14)
 
 

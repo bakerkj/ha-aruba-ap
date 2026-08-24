@@ -1550,6 +1550,20 @@ AP_SENSOR_DESCRIPTIONS: tuple[APSensorDescription, ...] = (
 # =============================================================================
 
 
+def _ap_network_connections(ap_mac: str) -> set[tuple[str, str]]:
+    """The AP's own ethernet MAC as a linkable registry connection (2026.8+).
+
+    Publishing the AP's MAC as the standard ``CONNECTION_NETWORK_MAC`` lets a
+    switch-port integration -- which learns this same MAC as its LLDP neighbor
+    on the AP's uplink port -- link the physical switch port to this AP device.
+    Gated by ``SPLIT_REGISTRY`` for the same reason as clients: before 2026.8 the
+    registry merges devices sharing a connection, which would steal entities.
+    """
+    if SPLIT_REGISTRY:
+        return {(device_registry.CONNECTION_NETWORK_MAC, ap_mac)}
+    return set()
+
+
 class ArubaAPBaseEntity(ArubaBaseEntity):
     """Base for sensors attached to a specific AP device."""
 
@@ -1563,6 +1577,7 @@ class ArubaAPBaseEntity(ArubaBaseEntity):
         mac_short = _mac_slug(ap_mac)
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{entry_id}_{mac_short}")},
+            connections=_ap_network_connections(ap_mac),
             name=(ap_data.name if ap_data else None) or f"Aruba AP {ap_mac}",
             manufacturer="Aruba Networks",
             model=ap_data.model if ap_data else None,

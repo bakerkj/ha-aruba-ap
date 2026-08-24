@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.19](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.18...v0.0.19) (2026-08-24)
+
+
+### Features
+
+* publish the AP's own MAC as a linkable connection ([#125](https://github.com/bakerkj/ha-aruba-ap/issues/125)) ([dc5cc33](https://github.com/bakerkj/ha-aruba-ap/commit/dc5cc330774fdc707b45f7b7355cd6b5ae4beebc))
+
+
+### Miscellaneous Chores
+
+* **deps:** update anthropics/claude-code-action action to v1.0.194 ([#123](https://github.com/bakerkj/ha-aruba-ap/issues/123)) ([316da5f](https://github.com/bakerkj/ha-aruba-ap/commit/316da5f0e570825c337e1de7a80dfa19c7de7659))
+* **deps:** update dependency uv to v0.12.5 ([#121](https://github.com/bakerkj/ha-aruba-ap/issues/121)) ([4286c1c](https://github.com/bakerkj/ha-aruba-ap/commit/4286c1c58ff94846f0e74e5752fffe672b93a5fb))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.16.4 ([#124](https://github.com/bakerkj/ha-aruba-ap/issues/124)) ([e6b0f64](https://github.com/bakerkj/ha-aruba-ap/commit/e6b0f64338e27c3662e1b04ab80ff6e40d2360bc))
+
 ## [0.0.18](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.17...v0.0.18) (2026-08-15)
 
 

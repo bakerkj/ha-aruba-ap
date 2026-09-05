@@ -6,7 +6,10 @@ dependencies = ["puresnmp>=2.0.0"]
 
 [dependency-groups]
 test = [
-  "pytest-homeassistant-custom-component>=0.13.323",
+  # 0.13.360+ pins Home Assistant 2026.9, which this integration now requires
+  # (async_get_device_by_identifier / async_get_devices; DeviceInfo dropped
+  # via_device). Keep in step with the hacs.json minimum HA version.
+  "pytest-homeassistant-custom-component>=0.13.360",
 ]
 dev = [
   { include-group = "test" },

@@ -55,11 +55,13 @@ class ClientConnectivity(ArubaEntityMixin, BinarySensorEntity):
             self.entity_id = f"binary_sensor.{slugify(name)}_connected"
         else:
             self.entity_id = f"binary_sensor.client_{mac_slug}_connected"
+        # The radio link (via_device_id) is maintained by ClientSensor's
+        # reconciler on the shared client device; this binary sensor only needs
+        # the identity fields.
         self._attr_device_info = client_device_info(
             entry_id,
             mac,
             _client_display_name(client, mac),
-            self._radio_via_device(client),
         )
 
     def _find_client(
@@ -69,17 +71,6 @@ class ClientConnectivity(ArubaEntityMixin, BinarySensorEntity):
         if not coord.data:
             return None
         return next((c for c in coord.data.clients if c["mac"] == self._mac), None)
-
-    def _radio_via_device(
-        self, client: dict[str, Any] | None
-    ) -> tuple[str, str] | None:
-        if client is None:
-            return None
-        ap_mac = client.get("radio_ap_mac")
-        radio_idx = client.get("radio_idx")
-        if ap_mac is None or radio_idx is None:
-            return None
-        return (DOMAIN, f"{self._entry_id}_{_mac_slug(ap_mac)}_radio_{radio_idx}")
 
     @property
     def is_on(self) -> bool:

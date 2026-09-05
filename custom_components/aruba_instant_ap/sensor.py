@@ -22,10 +22,13 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfDataRate, UnitOfTime
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry
+from homeassistant.helpers.device_registry import EventDeviceRegistryUpdatedData
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_device_registry_updated_event
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
@@ -1438,6 +1441,214 @@ class ArubaBaseEntity(ArubaEntityMixin, SensorEntity):
     """Shared base for all Aruba AP sensor entities."""
 
 
+def _devinfo_key(desired: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
+    """A hashable, order-stable key for a desired-device-info spec."""
+    items: list[tuple[str, Any]] = []
+    for k in sorted(desired):
+        v = desired[k]
+        if isinstance(v, (set, frozenset)):
+            v = tuple(sorted(v))
+        items.append((k, v))
+    return tuple(items)
+
+
+class _DeviceInfoReconciler:
+    """Keep an entity's dynamic device-registry fields in sync cheaply.
+
+    The naive pattern — call ``async_get_device`` and ``async_update_device`` on
+    every coordinator tick — is doubly expensive on modern HA: the lookup goes
+    through the deprecated ``device_registry.async_get_device`` (which runs
+    ``frame.report_usage`` and walks the whole Python stack on every call), and
+    it churns the registry even when nothing changed. With many per-AP /
+    per-client devices that dominates the event loop.
+
+    This mixin instead resolves the entity's device id once (from the entity's
+    own registry entry, falling back to a single non-deprecated
+    ``async_get_device_by_identifier`` lookup) and caches it; compares the
+    *desired* spec to the last-applied one and does zero registry access when
+    unchanged; on a real change reads the current entry by id (cheap, no
+    ``report_usage``) and writes only the fields that differ; and subscribes to
+    registry updates for its own device so an external edit (rename, another
+    integration, removal) invalidates the cache and is re-asserted next tick.
+
+    Subclasses implement :meth:`_reconcile_config_entry_id`,
+    :meth:`_reconcile_identifier` and :meth:`_reconcile_desired`.
+    """
+
+    # Populated lazily; declared for mypy.
+    hass: HomeAssistant
+    registry_entry: Any
+    _device_id: str | None = None
+    _applied_key: tuple[tuple[str, Any], ...] | None = None
+    _unsub_devreg: CALLBACK_TYPE | None = None
+
+    # --- hooks the subclass provides -------------------------------------
+    @property
+    def _reconcile_config_entry_id(self) -> str:
+        raise NotImplementedError
+
+    def _reconcile_identifier(self) -> tuple[str, str]:
+        raise NotImplementedError
+
+    def _reconcile_desired(self) -> dict[str, Any] | None:
+        """Return the desired dynamic device fields, or None to skip.
+
+        Recognised keys: ``name``, ``model``, ``sw_version``,
+        ``serial_number`` (scalars compared to the entry); ``via_identifier``
+        (a ``(domain, id)`` tuple or ``None`` — resolved to ``via_device_id``);
+        ``mac_connections`` (a set of MAC connection tuples) with optional
+        ``mac_mode`` = ``"replace"`` (default) or ``"add"``.
+        """
+        raise NotImplementedError
+
+    # --- plumbing --------------------------------------------------------
+    @callback
+    def _ensure_devreg_subscription(self) -> None:
+        """Resolve and cache the device id, subscribing to its updates once."""
+        if self._device_id is not None:
+            return
+        did: str | None = None
+        reg = self.registry_entry
+        if reg is not None:
+            did = reg.device_id
+        if did is None:
+            dev_reg = device_registry.async_get(self.hass)
+            entry = dev_reg.async_get_device_by_identifier(
+                self._reconcile_identifier(), self._reconcile_config_entry_id
+            )
+            did = entry.id if entry else None
+        if did is None:
+            return
+        self._device_id = did
+        if self._unsub_devreg is None:
+            self._unsub_devreg = async_track_device_registry_updated_event(
+                self.hass, did, self._on_devreg_updated
+            )
+
+    @callback
+    def _on_devreg_updated(self, event: Event[EventDeviceRegistryUpdatedData]) -> None:
+        """React to an external change to our device.
+
+        We only invalidate the cache here; the actual re-assert happens on the
+        next coordinator tick. That keeps all writes on the coordinator cadence
+        (at most one per tick) and avoids an event-driven write loop, while
+        still correcting an external edit promptly.
+        """
+        if event.data["action"] == "remove":
+            # The device is gone: drop the id AND tear down the now-dead
+            # subscription, so _ensure_devreg_subscription re-resolves and
+            # re-subscribes if a device with the same identifier is recreated.
+            self._stop_devinfo_reconcile()
+            self._device_id = None
+        self._applied_key = None
+
+    @callback
+    def _stop_devinfo_reconcile(self) -> None:
+        if self._unsub_devreg is not None:
+            self._unsub_devreg()
+            self._unsub_devreg = None
+
+    @callback
+    def _reconcile_device_info(self) -> None:
+        self._ensure_devreg_subscription()
+        if self._device_id is None:
+            return
+        desired = self._reconcile_desired()
+        if desired is None:
+            return
+        key = _devinfo_key(desired)
+        if key == self._applied_key:
+            return  # nothing changed → no registry access at all
+
+        dev_reg = device_registry.async_get(self.hass)
+        # Our devices are main devices; exclude child devices so the returned
+        # type is DeviceEntry (which carries connections/via_device_id).
+        entry = dev_reg.async_get(self._device_id, include_child_devices=False)
+        if entry is None:
+            # Device vanished; drop the dead subscription too so we re-resolve
+            # and re-subscribe on a later tick.
+            self._stop_devinfo_reconcile()
+            self._device_id = None
+            self._applied_key = None
+            return
+
+        kwargs: dict[str, Any] = {}
+        for attr in ("name", "model", "sw_version", "serial_number"):
+            if attr in desired and getattr(entry, attr) != desired[attr]:
+                kwargs[attr] = desired[attr]
+
+        # Resolve the parent link. via_identifier of None means "no parent" —
+        # clear any existing link. A named-but-unresolved parent (not yet in the
+        # registry) must leave an existing link untouched and defer caching so we
+        # retry — never clear a good link over a transient resolution miss.
+        via_incomplete = False
+        if "via_identifier" in desired:
+            via_ident = desired["via_identifier"]
+            if via_ident is None:
+                if entry.via_device_id is not None:
+                    kwargs["via_device_id"] = None
+            else:
+                via = dev_reg.async_get_device_by_identifier(
+                    via_ident, self._reconcile_config_entry_id
+                )
+                if via is None:
+                    via_incomplete = True  # parent pending — leave link, retry
+                elif entry.via_device_id != via.id:
+                    kwargs["via_device_id"] = via.id
+
+        conn_update: set[tuple[str, str]] | None = None
+        if "mac_connections" in desired:
+            desired_macs: set[tuple[str, str]] = desired["mac_connections"]
+            current_macs = {
+                (t, v)
+                for t, v in entry.connections
+                if t == device_registry.CONNECTION_NETWORK_MAC
+            }
+            if desired.get("mac_mode") == "add":
+                target_macs = current_macs | desired_macs
+            else:
+                target_macs = desired_macs
+            if current_macs != target_macs:
+                non_mac = {
+                    (t, v)
+                    for t, v in entry.connections
+                    if t != device_registry.CONNECTION_NETWORK_MAC
+                }
+                conn_update = non_mac | target_macs
+
+        # Apply scalar/link fields and MAC connections as SEPARATE writes: a
+        # routine connection collision (a client roaming between APs/ports) must
+        # not drop a bundled rename, and a failed write must not be cached as
+        # applied — otherwise the entity would never retry once the conflict
+        # clears, permanently stranding a device with stale info.
+        write_ok = True
+        if kwargs:
+            try:
+                dev_reg.async_update_device(self._device_id, **kwargs)
+            except HomeAssistantError as err:
+                write_ok = False
+                _LOGGER.debug(
+                    "Device info reconcile failed for %s: %s", self._device_id, err
+                )
+        if conn_update is not None:
+            try:
+                dev_reg.async_update_device(
+                    self._device_id, new_connections=conn_update
+                )
+            except HomeAssistantError as err:
+                # e.g. a MAC we tried to add is already on another device in the
+                # same config entry; it may free up later, so leave the spec
+                # uncached to retry.
+                write_ok = False
+                _LOGGER.debug(
+                    "Connection reconcile failed for %s: %s", self._device_id, err
+                )
+        # Cache the applied spec only when every attempted write succeeded and
+        # the parent link resolved — otherwise leave it so the next tick retries.
+        if write_ok and not via_incomplete:
+            self._applied_key = key
+
+
 # =============================================================================
 # AP sensor descriptions
 # =============================================================================
@@ -1564,7 +1775,7 @@ def _ap_network_connections(ap_mac: str) -> set[tuple[str, str]]:
     return set()
 
 
-class ArubaAPBaseEntity(ArubaBaseEntity):
+class ArubaAPBaseEntity(_DeviceInfoReconciler, ArubaBaseEntity):
     """Base for sensors attached to a specific AP device."""
 
     def __init__(
@@ -1575,6 +1786,8 @@ class ArubaAPBaseEntity(ArubaBaseEntity):
         self._ap_mac = ap_mac
         ap_data = coordinator.data.aps.get(ap_mac) if coordinator.data else None
         mac_short = _mac_slug(ap_mac)
+        # NB: the cluster link (``via_device``) is set by the reconciler as
+        # ``via_device_id`` — 2026.9 dropped ``via_device`` from DeviceInfo.
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{entry_id}_{mac_short}")},
             connections=_ap_network_connections(ap_mac),
@@ -1583,7 +1796,6 @@ class ArubaAPBaseEntity(ArubaBaseEntity):
             model=ap_data.model if ap_data else None,
             sw_version=ap_data.firmware if ap_data else None,
             serial_number=ap_data.serial if ap_data else None,
-            via_device=(DOMAIN, f"{entry_id}_cluster"),
         )
 
     def _ap_data(self) -> PerAPData | None:
@@ -1594,31 +1806,36 @@ class ArubaAPBaseEntity(ArubaBaseEntity):
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         if self.coordinator.data:
-            self._update_device_info()
+            self._reconcile_device_info()
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._stop_devinfo_reconcile()
+        await super().async_will_remove_from_hass()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        self._update_device_info()
+        self._reconcile_device_info()
         self.async_write_ha_state()
 
-    @callback
-    def _update_device_info(self) -> None:
+    # --- _DeviceInfoReconciler hooks ---
+    @property
+    def _reconcile_config_entry_id(self) -> str:
+        return self._entry_id
+
+    def _reconcile_identifier(self) -> tuple[str, str]:
+        return (DOMAIN, f"{self._entry_id}_{_mac_slug(self._ap_mac)}")
+
+    def _reconcile_desired(self) -> dict[str, Any] | None:
         ap = self._ap_data()
         if not ap:
-            return
-        mac_short = _mac_slug(self._ap_mac)
-        dev_reg = device_registry.async_get(self.hass)
-        device_entry = dev_reg.async_get_device(
-            identifiers={(DOMAIN, f"{self._entry_id}_{mac_short}")}
-        )
-        if device_entry:
-            dev_reg.async_update_device(
-                device_entry.id,
-                name=ap.name or f"Aruba AP {self._ap_mac}",
-                model=ap.model,
-                sw_version=ap.firmware,
-                serial_number=ap.serial,
-            )
+            return None
+        return {
+            "name": ap.name or f"Aruba AP {self._ap_mac}",
+            "model": ap.model,
+            "sw_version": ap.firmware,
+            "serial_number": ap.serial,
+            "via_identifier": (DOMAIN, f"{self._entry_id}_cluster"),
+        }
 
 
 class APSensor(ArubaAPBaseEntity):
@@ -1703,7 +1920,7 @@ class ClusterSensor(ArubaBaseEntity):
 # =============================================================================
 
 
-class RadioSensor(ArubaBaseEntity):
+class RadioSensor(_DeviceInfoReconciler, ArubaBaseEntity):
     """One sensor for one attribute of one radio on one AP."""
 
     def __init__(
@@ -1715,6 +1932,7 @@ class RadioSensor(ArubaBaseEntity):
         description: RadioSensorDescription,
     ) -> None:
         super().__init__(coordinator)
+        self._entry_id = entry_id
         self._ap_mac = ap_mac
         self._radio_index = radio_index
         self._description = description
@@ -1732,11 +1950,12 @@ class RadioSensor(ArubaBaseEntity):
         # Include AP name in the radio device name
         ap_data = coordinator.data.aps.get(ap_mac) if coordinator.data else None
         ap_name = (ap_data.name if ap_data else None) or ap_mac
+        # NB: the AP link (``via_device``) is set by the reconciler as
+        # ``via_device_id`` — 2026.9 dropped ``via_device`` from DeviceInfo.
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{entry_id}_{mac_short}_radio_{radio_index}")},
             name=f"{ap_name} / Radio {radio_index}",
             manufacturer="Aruba Networks",
-            via_device=(DOMAIN, f"{entry_id}_{mac_short}"),
         )
 
     def _radio_data(self) -> RadioData | None:
@@ -1755,6 +1974,41 @@ class RadioSensor(ArubaBaseEntity):
         if self._description.icon_fn:
             return self._description.icon_fn(self.native_value)
         return self._attr_icon
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if self.coordinator.data:
+            self._reconcile_device_info()
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._stop_devinfo_reconcile()
+        await super().async_will_remove_from_hass()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._reconcile_device_info()
+        self.async_write_ha_state()
+
+    # --- _DeviceInfoReconciler hooks ---
+    @property
+    def _reconcile_config_entry_id(self) -> str:
+        return self._entry_id
+
+    def _reconcile_identifier(self) -> tuple[str, str]:
+        mac_short = _mac_slug(self._ap_mac)
+        return (DOMAIN, f"{self._entry_id}_{mac_short}_radio_{self._radio_index}")
+
+    def _reconcile_desired(self) -> dict[str, Any] | None:
+        ap = (
+            self.coordinator.data.aps.get(self._ap_mac)
+            if self.coordinator.data
+            else None
+        )
+        ap_name = (ap.name if ap else None) or self._ap_mac
+        return {
+            "name": f"{ap_name} / Radio {self._radio_index}",
+            "via_identifier": (DOMAIN, f"{self._entry_id}_{_mac_slug(self._ap_mac)}"),
+        }
 
 
 # =============================================================================
@@ -1803,7 +2057,6 @@ def client_device_info(
     entry_id: str,
     mac: str,
     name: str,
-    via_device: tuple[str, str] | None,
 ) -> DeviceInfo:
     """The device a client's entities belong to.
 
@@ -1816,21 +2069,22 @@ def client_device_info(
     already holds it; publishing the standard type there pulls their devices
     onto ours, taking their entities, names and areas with them. The registry
     matches exact ``(type, value)`` tuples, so our own type cannot collide.
+
+    The radio link (``via_device``) is set separately as ``via_device_id`` by
+    ClientSensor's reconciler — 2026.9 dropped ``via_device`` from DeviceInfo,
+    and the client roams between radios so the link must be re-resolved anyway.
     """
     connections = {(CONNECTION_CLIENT_MAC, mac)}
     if SPLIT_REGISTRY:
         connections.add((device_registry.CONNECTION_NETWORK_MAC, mac))
-    info = DeviceInfo(
+    return DeviceInfo(
         identifiers={(DOMAIN, f"{entry_id}_client_{_mac_slug(mac)}")},
         connections=connections,
         name=name,
     )
-    if via_device is not None:
-        info["via_device"] = via_device
-    return info
 
 
-class ClientSensor(ArubaBaseEntity):
+class ClientSensor(_DeviceInfoReconciler, ArubaBaseEntity):
     """One sensor for one attribute of one WiFi client."""
 
     def __init__(
@@ -1859,9 +2113,7 @@ class ClientSensor(ArubaBaseEntity):
         else:
             self.entity_id = f"sensor.client_{mac_slug}_{description.key}"
         name = _client_display_name(client, mac)
-        self._attr_device_info = client_device_info(
-            entry_id, mac, name, self._radio_via_device(client)
-        )
+        self._attr_device_info = client_device_info(entry_id, mac, name)
 
     def _find_client(
         self, coordinator: ArubaAPCoordinator | None = None
@@ -1892,41 +2144,38 @@ class ClientSensor(ArubaBaseEntity):
         client = self._find_client()
         return None if client is None else self._description.value_fn(client)
 
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if self.coordinator.data:
+            self._reconcile_device_info()
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._stop_devinfo_reconcile()
+        await super().async_will_remove_from_hass()
+
     @callback
     def _handle_coordinator_update(self) -> None:
-        self._update_client_device_info()
+        self._reconcile_device_info()
         self.async_write_ha_state()
 
-    @callback
-    def _update_client_device_info(self) -> None:
+    # --- _DeviceInfoReconciler hooks ---
+    @property
+    def _reconcile_config_entry_id(self) -> str:
+        return self._entry_id
+
+    def _reconcile_identifier(self) -> tuple[str, str]:
+        return (DOMAIN, f"{self._entry_id}_client_{_mac_slug(self._mac)}")
+
+    def _reconcile_desired(self) -> dict[str, Any] | None:
         client = self._find_client()
         if client is None:
-            return
-        dev_reg = device_registry.async_get(self.hass)
-        device_entry = dev_reg.async_get_device(
-            identifiers={(DOMAIN, f"{self._entry_id}_client_{_mac_slug(self._mac)}")}
-        )
-        if device_entry is None:
-            return
-
-        update_kwargs: dict[str, Any] = {}
-
-        name = _client_display_name(client, self._mac)
-        if device_entry.name != name:
-            update_kwargs["name"] = name
-
-        # Resolve current radio device id for via_device (handles roaming)
-        via_device_id: str | None = None
-        radio_via = self._radio_via_device(client)
-        if radio_via:
-            radio_entry = dev_reg.async_get_device(identifiers={radio_via})
-            if radio_entry:
-                via_device_id = radio_entry.id
-        if device_entry.via_device_id != via_device_id:
-            update_kwargs["via_device_id"] = via_device_id
-
-        if update_kwargs:
-            dev_reg.async_update_device(device_entry.id, **update_kwargs)
+            return None
+        # via_identifier is the radio the client is currently on — it changes as
+        # the client roams, and the reconciler re-resolves it to via_device_id.
+        return {
+            "name": _client_display_name(client, self._mac),
+            "via_identifier": self._radio_via_device(client),
+        }
 
 
 # =============================================================================

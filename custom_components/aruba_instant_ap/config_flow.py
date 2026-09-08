@@ -15,11 +15,15 @@ from homeassistant.config_entries import ConfigFlowResult
 from .const import (
     CONF_CLIENTS_MAPPED_ONLY,
     CONF_COMMUNITY,
+    CONF_ENABLE_DEVICE_TRACKER,
     CONF_HOST,
     CONF_MAC_HOSTNAME_FILE,
+    CONF_PRESENCE_INTERVAL,
     CONF_RECORD_DECIMATION,
     CONF_SNMP_PORT,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_ENABLE_DEVICE_TRACKER,
+    DEFAULT_PRESENCE_INTERVAL,
     DEFAULT_RECORD_DECIMATION,
     DEFAULT_SNMP_PORT,
     DEFAULT_UPDATE_INTERVAL,
@@ -95,6 +99,12 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         CONF_CLIENTS_MAPPED_ONLY: user_input.get(
                             CONF_CLIENTS_MAPPED_ONLY, False
                         ),
+                        CONF_ENABLE_DEVICE_TRACKER: user_input.get(
+                            CONF_ENABLE_DEVICE_TRACKER, DEFAULT_ENABLE_DEVICE_TRACKER
+                        ),
+                        CONF_PRESENCE_INTERVAL: user_input.get(
+                            CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL
+                        ),
                     },
                 )
 
@@ -143,6 +153,12 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         CONF_CLIENTS_MAPPED_ONLY: user_input.get(
                             CONF_CLIENTS_MAPPED_ONLY, False
                         ),
+                        CONF_ENABLE_DEVICE_TRACKER: user_input.get(
+                            CONF_ENABLE_DEVICE_TRACKER, DEFAULT_ENABLE_DEVICE_TRACKER
+                        ),
+                        CONF_PRESENCE_INTERVAL: user_input.get(
+                            CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL
+                        ),
                     },
                 )
 
@@ -183,6 +199,18 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         CONF_CLIENTS_MAPPED_ONLY,
                         default=entry.options.get(CONF_CLIENTS_MAPPED_ONLY, False),
                     ): bool,
+                    vol.Optional(
+                        CONF_ENABLE_DEVICE_TRACKER,
+                        default=entry.options.get(
+                            CONF_ENABLE_DEVICE_TRACKER, DEFAULT_ENABLE_DEVICE_TRACKER
+                        ),
+                    ): bool,
+                    vol.Required(
+                        CONF_PRESENCE_INTERVAL,
+                        default=entry.options.get(
+                            CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=10)),
                 }
             ),
             errors=errors,

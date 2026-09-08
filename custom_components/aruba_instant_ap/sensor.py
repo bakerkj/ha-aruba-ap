@@ -489,6 +489,17 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
             snmp_version=self.snmp_version,
         )
 
+    async def async_present_client_macs(self) -> set[str]:
+        """The MACs currently associated to the cluster (one lightweight walk).
+
+        A single walk of the client BSSID column — every associated station has
+        one — keyed by MAC in the OID tail. Used by the optional presence
+        device_tracker so it can poll far more often than the full telemetry
+        fetch without walking the whole client attribute set.
+        """
+        raw = await self._walk(OID_CLIENT_BSSID)
+        return set(_parse_mac_table(_safe_walk(raw), OID_CLIENT_BSSID, tail=True))
+
     async def _async_update_data(self) -> ArubaClusterData:
         try:
             return await self._fetch_data()

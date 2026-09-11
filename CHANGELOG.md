@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.21](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.20...v0.0.21) (2026-09-11)
+
+
+### Features
+
+* opt-in SNMP presence device_tracker ([#144](https://github.com/bakerkj/ha-aruba-ap/issues/144)) ([fc1c683](https://github.com/bakerkj/ha-aruba-ap/commit/fc1c68315e14ab3a043364d7f01902b53f62afd5))
+
+
+### Miscellaneous Chores
+
+* **deps:** update anthropics/claude-code-action action to v1.0.217 ([#139](https://github.com/bakerkj/ha-aruba-ap/issues/139)) ([8cca3f2](https://github.com/bakerkj/ha-aruba-ap/commit/8cca3f29bd4d8952d61d67f5352ecd08a6d33518))
+* **deps:** update dependency uv to v0.12.13 ([#143](https://github.com/bakerkj/ha-aruba-ap/issues/143)) ([5597f32](https://github.com/bakerkj/ha-aruba-ap/commit/5597f320882f0b47b2dfcef1f5b0145651359a3c))
+* **deps:** update github-actions ([#141](https://github.com/bakerkj/ha-aruba-ap/issues/141)) ([76b72f3](https://github.com/bakerkj/ha-aruba-ap/commit/76b72f379a00f3040d01bde18d8aabd648949801))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.16.7 ([#142](https://github.com/bakerkj/ha-aruba-ap/issues/142)) ([eb69220](https://github.com/bakerkj/ha-aruba-ap/commit/eb6922075e9c09976a2d9fbfcb2332661d0d7b24))
+
 ## [0.0.20](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.19...v0.0.20) (2026-09-05)
 
 

@@ -6,8 +6,9 @@
 A separate, lightweight ``ArubaPresenceCoordinator`` polls only the
 associated-client table on a fast cadence, so presence is responsive without
 polling the full AP telemetry (and its recorder writes) that often. Each
-associated client becomes a modern ``ScannerEntity`` — API/SNMP based, so none
-of the fork-per-scan cost of the legacy telnet ``aruba`` device_tracker.
+allowlisted client gets a modern ``ScannerEntity`` up front — ``home`` while
+associated, ``not_home`` otherwise — API/SNMP based, so none of the
+fork-per-scan cost of the legacy telnet ``aruba`` device_tracker.
 """
 
 from __future__ import annotations
@@ -79,8 +80,8 @@ class ArubaClientTracker(CoordinatorEntity[ArubaPresenceCoordinator], ScannerEnt
     ) -> None:
         super().__init__(coordinator)
         self._main = main
-        self._mac = mac
-        self._attr_mac_address = mac
+        self._mac = mac.lower()  # canonical; AP reports/stores MACs lowercase
+        self._attr_mac_address = self._mac
         self._refresh_client_attrs()
 
     def _client(self) -> dict[str, Any] | None:
@@ -88,7 +89,7 @@ class ArubaClientTracker(CoordinatorEntity[ArubaPresenceCoordinator], ScannerEnt
         data = self._main.data
         if data is None:
             return None
-        return next((c for c in data.clients if c["mac"] == self._mac), None)
+        return next((c for c in data.clients if c["mac"].lower() == self._mac), None)
 
     def _refresh_client_attrs(self) -> None:
         client = self._client()
@@ -99,7 +100,7 @@ class ArubaClientTracker(CoordinatorEntity[ArubaPresenceCoordinator], ScannerEnt
 
     @property
     def is_connected(self) -> bool:
-        return self._mac in (self.coordinator.data or set())
+        return self._mac in {m.lower() for m in (self.coordinator.data or ())}
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -112,7 +113,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up one presence tracker per associated WiFi client."""
+    """Set up one presence tracker per allowlisted client."""
     main: ArubaAPCoordinator = hass.data[DOMAIN][entry.entry_id]
     # Explicit opt-in allowlist; empty means track nothing, so skip the poll.
     tracked = {m.lower() for m in entry.options.get(CONF_TRACKED_CLIENTS, [])}
@@ -120,22 +121,14 @@ async def async_setup_entry(
         return
     interval = entry.options.get(CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL)
     presence = ArubaPresenceCoordinator(hass, main, interval)
-    entry_id = entry.entry_id
-    known: set[str] = set()
-
-    @callback
-    def _add_new_trackers() -> None:
-        new = {m for m in (presence.data or set()) if m.lower() in tracked} - known
-        if not new:
-            return
-        known.update(new)
-        async_add_entities(
-            ArubaClientTracker(presence, main, entry_id, mac) for mac in new
-        )
-
-    # Adding the listener schedules the periodic poll; the immediate refresh
-    # populates the first set of trackers. A presence-poll failure must not fail
-    # the platform (the telemetry entry is independent), so refresh rather than
-    # first-refresh — trackers simply appear on the next successful poll.
-    entry.async_on_unload(presence.async_add_listener(_add_new_trackers))
+    # Refresh once so initial home/away + names are right; a poll failure must
+    # not fail the platform (the telemetry entry is independent).
     await presence.async_refresh()
+    # One tracker per allowlisted MAC, created up front — an absent/away client
+    # still needs a not_home entity to transition from (e.g. arrival automations).
+    # Adding the entities subscribes them to the coordinator, which starts the
+    # periodic poll.
+    async_add_entities(
+        ArubaClientTracker(presence, main, entry.entry_id, mac)
+        for mac in sorted(tracked)
+    )

@@ -77,9 +77,8 @@ STEP_USER_SCHEMA = vol.Schema(
         ): vol.All(vol.Coerce(int), vol.Range(min=1)),
         vol.Optional(CONF_MAC_HOSTNAME_FILE, default=""): str,
         vol.Optional(CONF_CLIENTS_MAPPED_ONLY, default=False): bool,
-        vol.Optional(CONF_TRACKED_CLIENTS, default=[]): selector.SelectSelector(
-            selector.SelectSelectorConfig(options=[], multiple=True, custom_value=True)
-        ),
+        # tracked_clients is reconfigure-only: at first setup no clients are
+        # discovered yet, and the tracker is enabled via reconfigure anyway.
     }
 )
 

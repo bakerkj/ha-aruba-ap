@@ -3,9 +3,9 @@
 
 """Tests for the opt-in presence device_tracker.
 
-A lightweight coordinator polls only the associated-client set, and each
-associated MAC becomes a router ScannerEntity — home while the cluster reports
-it, not_home once it leaves, unavailable when the poll fails.
+A lightweight coordinator polls only the associated-client set; each allowlisted
+MAC gets a router ScannerEntity up front — home while the cluster reports it,
+not_home otherwise, unavailable when the poll fails.
 """
 
 from unittest.mock import AsyncMock, MagicMock
@@ -51,7 +51,7 @@ async def setup(hass):
     """Run the platform and tear down the (real) presence coordinator's timer."""
     coordinators: list = []
 
-    async def _do(main, tracked=(_MAC, _OTHER_MAC)) -> list[ArubaClientTracker]:
+    async def _do(main, tracked=(_MAC,)) -> list[ArubaClientTracker]:
         entry = MockConfigEntry(
             domain=DOMAIN,
             entry_id="test_entry",
@@ -75,8 +75,8 @@ async def setup(hass):
         await coordinator.async_shutdown()
 
 
-async def test_one_tracker_per_associated_client(setup):
-    added = await setup(_make_main([_MAC, _OTHER_MAC]))
+async def test_one_tracker_per_tracked_client(setup):
+    added = await setup(_make_main([_MAC, _OTHER_MAC]), tracked=[_MAC, _OTHER_MAC])
     assert {e._mac for e in added} == {_MAC, _OTHER_MAC}
     assert all(e.source_type is SourceType.ROUTER for e in added)
     assert all(e.mac_address == e._mac for e in added)
@@ -85,40 +85,58 @@ async def test_one_tracker_per_associated_client(setup):
 
 
 async def test_home_while_associated(setup):
-    tracker = (await setup(_make_main([_MAC])))[0]
+    tracker = (await setup(_make_main([_MAC]), tracked=[_MAC]))[0]
     assert tracker.is_connected is True
     assert tracker.available is True
+
+
+async def test_tracked_but_absent_is_created_not_home(setup):
+    """A tracked client that isn't associated still gets a tracker (not_home),
+    so arrival automations have a prior state to transition from."""
+    added = await setup(_make_main([]), tracked=[_MAC])
+    assert [e._mac for e in added] == [_MAC]
+    assert added[0].is_connected is False
+    assert added[0].available is True  # poll succeeded, just not present
 
 
 async def test_not_home_once_it_leaves(setup):
     """A client no longer in the associated set reads not-connected (its poll
     still succeeded), never unavailable — that distinction is the signal."""
-    tracker = (await setup(_make_main([_MAC])))[0]
+    tracker = (await setup(_make_main([_MAC]), tracked=[_MAC]))[0]
     tracker.coordinator.data.discard(_MAC)
     assert tracker.is_connected is False
     assert tracker.available is True
 
 
 async def test_unavailable_when_presence_poll_fails(setup):
-    tracker = (await setup(_make_main([_MAC])))[0]
+    tracker = (await setup(_make_main([_MAC]), tracked=[_MAC]))[0]
     tracker.coordinator.last_update_success = False
     assert tracker.available is False
 
 
 async def test_name_and_ip_follow_the_client(setup):
-    tracker = (await setup(_make_main([_MAC])))[0]
+    tracker = (await setup(_make_main([_MAC]), tracked=[_MAC]))[0]
     assert tracker.name == "lg-washer"
     assert tracker.hostname == "lg-washer"
     assert tracker.ip_address == "192.168.1.5"
 
 
 async def test_name_falls_back_to_mac(setup):
-    tracker = (await setup(_make_main([_MAC], clients=[{"mac": _MAC}])))[0]
+    tracker = (
+        await setup(_make_main([_MAC], clients=[{"mac": _MAC}]), tracked=[_MAC])
+    )[0]
     assert tracker.name == _MAC
 
 
+async def test_mac_casing_is_normalized(setup):
+    """An allowlist MAC in upper case still matches the lower-case AP table."""
+    tracker = (await setup(_make_main([_MAC]), tracked=[_MAC.upper()]))[0]
+    assert tracker.mac_address == _MAC  # canonical lower case
+    assert tracker.is_connected is True
+
+
 async def test_allowlist_limits_tracked_clients(setup):
-    """Only associated clients on the allowlist get a tracker."""
+    """Only clients on the allowlist get a tracker, regardless of who's present."""
     added = await setup(_make_main([_MAC, _OTHER_MAC]), tracked=[_MAC])
     assert [e._mac for e in added] == [_MAC]
 
@@ -129,7 +147,7 @@ async def test_empty_allowlist_tracks_nothing(setup):
     assert added == []
 
 
-async def test_no_duplicate_trackers_on_repeated_updates(setup):
-    added = await setup(_make_main([_MAC]))
+async def test_trackers_created_once_at_setup(setup):
+    added = await setup(_make_main([_MAC]), tracked=[_MAC])
     added[0].coordinator.async_set_updated_data({_MAC})
     assert len(added) == 1

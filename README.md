@@ -9,6 +9,8 @@ per-client sensors in Home Assistant.
 - **Per-radio sensors** — one device per radio per AP, linked to its parent AP
 - **Per-client sensors** — one device per associated WiFi client, linked to its
   radio
+- **Presence device trackers** — opt-in, per selected client, via a
+  `tracked_clients` allowlist (modern `ScannerEntity`, no `known_devices.yaml`)
 
 ## Installation
 
@@ -30,14 +32,17 @@ Copy `custom_components/aruba_instant_ap` into your Home Assistant
 Add the integration via **Settings → Devices & Services → Add Integration →
 Aruba Instant AP**.
 
-| Field             | Description                                                           |
-| ----------------- | --------------------------------------------------------------------- |
-| Host              | IP address or hostname of the virtual controller                      |
-| SNMP Community    | SNMP v2c community string (default: `public`)                         |
-| SNMP Port         | UDP port (default: `161`)                                             |
-| SNMP Version      | `v2c` (default) or `v1`                                               |
-| Update interval   | Poll interval in seconds (default: `60`, minimum: `10`)               |
-| MAC hostname file | Path to a JSON file mapping MAC addresses to display names (optional) |
+| Field                  | Description                                                           |
+| ---------------------- | --------------------------------------------------------------------- |
+| Host                   | IP address or hostname of the virtual controller                      |
+| SNMP Community         | SNMP v2c community string (default: `public`)                         |
+| SNMP Port              | UDP port (default: `161`)                                             |
+| SNMP Version           | `v2c` (default) or `v1`                                               |
+| Update interval        | Poll interval in seconds (default: `60`, minimum: `10`)               |
+| MAC hostname file      | Path to a JSON file mapping MAC addresses to display names (optional) |
+| Enable device trackers | Create presence `device_tracker` entities (opt-in, default off)       |
+| Presence interval      | Presence poll interval in seconds (default: `15`, minimum: `10`)      |
+| Tracked clients        | MAC allowlist of clients to track (empty = none; see below)           |
 
 All settings can be changed later via **Settings → Devices & Services → Aruba
 Instant AP → Reconfigure**.
@@ -106,6 +111,20 @@ Several MAC formats are accepted:
 | MAC Address        | Client MAC address                                          |
 | Name               | Display name (from mapping file or Aruba hostname)          |
 | Device Type        | OS/device type reported by Aruba (e.g. `iPhone`, `Android`) |
+
+## Device tracker (presence)
+
+Optionally exposes a `device_tracker` per selected client — a modern
+`ScannerEntity` (`source_type: router`), with none of the fork-per-scan cost of
+the legacy telnet `aruba` platform and no `known_devices.yaml`.
+
+- Turn on **Enable device trackers**, then list client MACs under **Tracked
+  clients**; only those get a tracker (empty = track nothing). New clients are
+  never tracked automatically.
+- A tracker reads `home` while its client is associated, `not_home` when it
+  leaves, `unavailable` if the presence poll fails.
+- Presence is polled separately from the sensors, every **Presence interval**
+  seconds — responsive without multiplying sensor recorder writes.
 
 ## Requirements
 

@@ -129,7 +129,7 @@ the legacy telnet `aruba` platform and no `known_devices.yaml`.
 ## Requirements
 
 - Aruba Instant (AOS-8) cluster with SNMP v2c enabled
-- Home Assistant 2026.4 or later
+- Home Assistant 2026.9 or later
 
 ## Development
 

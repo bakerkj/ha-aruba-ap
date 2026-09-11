@@ -35,6 +35,11 @@ _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
+# Platforms actually forwarded per entry, so unload matches setup even when the
+# option changed in between (enabling device_tracker triggers a reload — unload
+# must not try to unload a platform the prior setup never created).
+_FORWARDED: dict[str, list[Platform]] = {}
+
 
 def _entry_platforms(entry: ConfigEntry) -> list[Platform]:
     """Platforms to set up for this entry — device_tracker is opt-in."""
@@ -77,7 +82,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await async_prewarm_plugins(hass)
-    await hass.config_entries.async_forward_entry_setups(entry, _entry_platforms(entry))
+    platforms = _entry_platforms(entry)
+    _FORWARDED[entry.entry_id] = platforms
+    await hass.config_entries.async_forward_entry_setups(entry, platforms)
     await coordinator.async_config_entry_first_refresh()
 
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
@@ -86,11 +93,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload the config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
-        entry, _entry_platforms(entry)
-    )
+    platforms = _FORWARDED.get(entry.entry_id, _entry_platforms(entry))
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, platforms)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
+        _FORWARDED.pop(entry.entry_id, None)
     return unload_ok
 
 

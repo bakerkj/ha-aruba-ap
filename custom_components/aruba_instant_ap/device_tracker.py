@@ -26,7 +26,12 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
-from .const import CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL, DOMAIN
+from .const import (
+    CONF_PRESENCE_INTERVAL,
+    CONF_TRACKED_CLIENTS,
+    DEFAULT_PRESENCE_INTERVAL,
+    DOMAIN,
+)
 from .sensor import ArubaAPCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -109,6 +114,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up one presence tracker per associated WiFi client."""
     main: ArubaAPCoordinator = hass.data[DOMAIN][entry.entry_id]
+    # Explicit opt-in allowlist; empty means track nothing, so skip the poll.
+    tracked = {m.lower() for m in entry.options.get(CONF_TRACKED_CLIENTS, [])}
+    if not tracked:
+        return
     interval = entry.options.get(CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL)
     presence = ArubaPresenceCoordinator(hass, main, interval)
     entry_id = entry.entry_id
@@ -116,12 +125,7 @@ async def async_setup_entry(
 
     @callback
     def _add_new_trackers() -> None:
-        macs = presence.data
-        if not macs:
-            return
-        if main.clients_mapped_only:
-            macs = macs & main._mac_hostname_map.keys()
-        new = macs - known
+        new = {m for m in (presence.data or set()) if m.lower() in tracked} - known
         if not new:
             return
         known.update(new)

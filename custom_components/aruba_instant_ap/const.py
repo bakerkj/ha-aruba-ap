@@ -41,6 +41,12 @@ DEFAULT_ENABLE_DEVICE_TRACKER: Final = False
 CONF_PRESENCE_INTERVAL: Final = "presence_interval"
 DEFAULT_PRESENCE_INTERVAL: Final = 15
 
+# Allowlist of client MACs to create presence trackers for (opt-in, like the
+# modern router integrations): only associated clients in this list get a
+# device_tracker. Empty = track none, so enabling the platform without picking
+# clients is intentionally inert rather than tracking every associated client.
+CONF_TRACKED_CLIENTS: Final = "tracked_clients"
+
 # High-frequency sensors — client tx/rx throughput, radio tx/rx throughput,
 # SNR, and client tx/rx link speed — publish a new value only every Nth poll
 # cycle, phase-staggered per entity. Throughput is a counter delta whose

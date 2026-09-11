@@ -17,6 +17,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.aruba_instant_ap.const import (
     CONF_ENABLE_DEVICE_TRACKER,
     CONF_PRESENCE_INTERVAL,
+    CONF_TRACKED_CLIENTS,
     DOMAIN,
 )
 from custom_components.aruba_instant_ap.device_tracker import (
@@ -50,11 +51,15 @@ async def setup(hass):
     """Run the platform and tear down the (real) presence coordinator's timer."""
     coordinators: list = []
 
-    async def _do(main) -> list[ArubaClientTracker]:
+    async def _do(main, tracked=(_MAC, _OTHER_MAC)) -> list[ArubaClientTracker]:
         entry = MockConfigEntry(
             domain=DOMAIN,
             entry_id="test_entry",
-            options={CONF_ENABLE_DEVICE_TRACKER: True, CONF_PRESENCE_INTERVAL: 15},
+            options={
+                CONF_ENABLE_DEVICE_TRACKER: True,
+                CONF_PRESENCE_INTERVAL: 15,
+                CONF_TRACKED_CLIENTS: list(tracked),
+            },
         )
         entry.add_to_hass(hass)
         hass.data.setdefault(DOMAIN, {})["test_entry"] = main
@@ -112,13 +117,16 @@ async def test_name_falls_back_to_mac(setup):
     assert tracker.name == _MAC
 
 
-async def test_clients_mapped_only_is_honoured(setup):
-    """The option that filters the sensor/binary platforms filters trackers too."""
-    main = _make_main([_MAC, _OTHER_MAC])
-    main.clients_mapped_only = True
-    main._mac_hostname_map = {_MAC: "lg-washer"}
-    added = await setup(main)
+async def test_allowlist_limits_tracked_clients(setup):
+    """Only associated clients on the allowlist get a tracker."""
+    added = await setup(_make_main([_MAC, _OTHER_MAC]), tracked=[_MAC])
     assert [e._mac for e in added] == [_MAC]
+
+
+async def test_empty_allowlist_tracks_nothing(setup):
+    """Empty allowlist is opt-in inert — no trackers even with clients present."""
+    added = await setup(_make_main([_MAC, _OTHER_MAC]), tracked=[])
+    assert added == []
 
 
 async def test_no_duplicate_trackers_on_repeated_updates(setup):

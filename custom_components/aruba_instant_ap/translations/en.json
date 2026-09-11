@@ -17,7 +17,10 @@
           "host": "IP Address or Hostname",
           "community": "SNMP Community String",
           "snmp_port": "SNMP Port",
-          "record_decimation": "Recorder decimation (publish high-rate sensors every Nth poll; 1 = every poll)"
+          "record_decimation": "Recorder decimation (publish high-rate sensors every Nth poll; 1 = every poll)",
+          "enable_device_tracker": "Enable presence device trackers",
+          "presence_interval": "Presence poll interval (seconds)",
+          "tracked_clients": "Clients to track (by MAC; empty = track none)"
         }
       }
     },

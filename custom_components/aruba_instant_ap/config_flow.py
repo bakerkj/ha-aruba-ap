@@ -10,16 +10,23 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlowResult
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import selector
 
 from .const import (
     CONF_CLIENTS_MAPPED_ONLY,
     CONF_COMMUNITY,
+    CONF_ENABLE_DEVICE_TRACKER,
     CONF_HOST,
     CONF_MAC_HOSTNAME_FILE,
+    CONF_PRESENCE_INTERVAL,
     CONF_RECORD_DECIMATION,
     CONF_SNMP_PORT,
+    CONF_TRACKED_CLIENTS,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_ENABLE_DEVICE_TRACKER,
+    DEFAULT_PRESENCE_INTERVAL,
     DEFAULT_RECORD_DECIMATION,
     DEFAULT_SNMP_PORT,
     DEFAULT_UPDATE_INTERVAL,
@@ -27,6 +34,30 @@ from .const import (
     OID_SYS_NAME,
 )
 from .snmp_helper import async_snmp_get
+
+
+def _tracked_clients_selector(
+    hass: HomeAssistant, entry: ConfigEntry | None
+) -> selector.SelectSelector:
+    """Multi-select of client MACs to track, seeded with the entry's currently
+    discovered clients (label: name + MAC). custom_value lets any MAC be added."""
+    options: list[selector.SelectOptionDict] = []
+    if entry is not None:
+        coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+        data = getattr(coordinator, "data", None)
+        for client in getattr(data, "clients", []) or []:
+            mac = client.get("mac")
+            if not mac:
+                continue
+            name = client.get("name")
+            label = f"{name} ({mac})" if name else mac
+            options.append(selector.SelectOptionDict(value=mac, label=label))
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=options, multiple=True, custom_value=True, sort=True
+        )
+    )
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +77,8 @@ STEP_USER_SCHEMA = vol.Schema(
         ): vol.All(vol.Coerce(int), vol.Range(min=1)),
         vol.Optional(CONF_MAC_HOSTNAME_FILE, default=""): str,
         vol.Optional(CONF_CLIENTS_MAPPED_ONLY, default=False): bool,
+        # tracked_clients is reconfigure-only: at first setup no clients are
+        # discovered yet, and the tracker is enabled via reconfigure anyway.
     }
 )
 
@@ -95,6 +128,13 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         CONF_CLIENTS_MAPPED_ONLY: user_input.get(
                             CONF_CLIENTS_MAPPED_ONLY, False
                         ),
+                        CONF_ENABLE_DEVICE_TRACKER: user_input.get(
+                            CONF_ENABLE_DEVICE_TRACKER, DEFAULT_ENABLE_DEVICE_TRACKER
+                        ),
+                        CONF_PRESENCE_INTERVAL: user_input.get(
+                            CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL
+                        ),
+                        CONF_TRACKED_CLIENTS: user_input.get(CONF_TRACKED_CLIENTS, []),
                     },
                 )
 
@@ -143,6 +183,13 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         CONF_CLIENTS_MAPPED_ONLY: user_input.get(
                             CONF_CLIENTS_MAPPED_ONLY, False
                         ),
+                        CONF_ENABLE_DEVICE_TRACKER: user_input.get(
+                            CONF_ENABLE_DEVICE_TRACKER, DEFAULT_ENABLE_DEVICE_TRACKER
+                        ),
+                        CONF_PRESENCE_INTERVAL: user_input.get(
+                            CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL
+                        ),
+                        CONF_TRACKED_CLIENTS: user_input.get(CONF_TRACKED_CLIENTS, []),
                     },
                 )
 
@@ -183,6 +230,22 @@ class ArubaInstantAPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # typ
                         CONF_CLIENTS_MAPPED_ONLY,
                         default=entry.options.get(CONF_CLIENTS_MAPPED_ONLY, False),
                     ): bool,
+                    vol.Optional(
+                        CONF_TRACKED_CLIENTS,
+                        default=entry.options.get(CONF_TRACKED_CLIENTS, []),
+                    ): _tracked_clients_selector(self.hass, entry),
+                    vol.Optional(
+                        CONF_ENABLE_DEVICE_TRACKER,
+                        default=entry.options.get(
+                            CONF_ENABLE_DEVICE_TRACKER, DEFAULT_ENABLE_DEVICE_TRACKER
+                        ),
+                    ): bool,
+                    vol.Required(
+                        CONF_PRESENCE_INTERVAL,
+                        default=entry.options.get(
+                            CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=10)),
                 }
             ),
             errors=errors,

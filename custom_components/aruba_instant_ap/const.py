@@ -32,6 +32,21 @@ CONF_CLIENTS_MAPPED_ONLY: Final = "clients_mapped_only"
 CONF_UPDATE_INTERVAL: Final = "update_interval"
 DEFAULT_UPDATE_INTERVAL: Final = 60
 
+# Optional presence device_tracker: a separate, lightweight coordinator polls
+# just the associated-client table on a faster cadence than the full telemetry
+# poll above, so presence is responsive without multiplying recorder writes for
+# every AP sensor. Off by default.
+CONF_ENABLE_DEVICE_TRACKER: Final = "enable_device_tracker"
+DEFAULT_ENABLE_DEVICE_TRACKER: Final = False
+CONF_PRESENCE_INTERVAL: Final = "presence_interval"
+DEFAULT_PRESENCE_INTERVAL: Final = 15
+
+# Allowlist of client MACs to create presence trackers for (opt-in, like the
+# modern router integrations): only associated clients in this list get a
+# device_tracker. Empty = track none, so enabling the platform without picking
+# clients is intentionally inert rather than tracking every associated client.
+CONF_TRACKED_CLIENTS: Final = "tracked_clients"
+
 # High-frequency sensors — client tx/rx throughput, radio tx/rx throughput,
 # SNR, and client tx/rx link speed — publish a new value only every Nth poll
 # cycle, phase-staggered per entity. Throughput is a counter delta whose

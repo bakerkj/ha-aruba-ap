@@ -15,11 +15,13 @@ from homeassistant.helpers import config_validation as cv
 from .const import (
     CONF_CLIENTS_MAPPED_ONLY,
     CONF_COMMUNITY,
+    CONF_ENABLE_DEVICE_TRACKER,
     CONF_HOST,
     CONF_MAC_HOSTNAME_FILE,
     CONF_RECORD_DECIMATION,
     CONF_SNMP_PORT,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_ENABLE_DEVICE_TRACKER,
     DEFAULT_RECORD_DECIMATION,
     DEFAULT_SNMP_PORT,
     DEFAULT_UPDATE_INTERVAL,
@@ -32,6 +34,19 @@ _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
+
+# Platforms actually forwarded per entry, so unload matches setup even when the
+# option changed in between (enabling device_tracker triggers a reload — unload
+# must not try to unload a platform the prior setup never created).
+_FORWARDED: dict[str, list[Platform]] = {}
+
+
+def _entry_platforms(entry: ConfigEntry) -> list[Platform]:
+    """Platforms to set up for this entry — device_tracker is opt-in."""
+    platforms = [*PLATFORMS]
+    if entry.options.get(CONF_ENABLE_DEVICE_TRACKER, DEFAULT_ENABLE_DEVICE_TRACKER):
+        platforms.append(Platform.DEVICE_TRACKER)
+    return platforms
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -67,7 +82,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await async_prewarm_plugins(hass)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    platforms = _entry_platforms(entry)
+    _FORWARDED[entry.entry_id] = platforms
+    await hass.config_entries.async_forward_entry_setups(entry, platforms)
     await coordinator.async_config_entry_first_refresh()
 
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
@@ -76,9 +93,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload the config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    platforms = _FORWARDED.get(entry.entry_id, _entry_platforms(entry))
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, platforms)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
+        _FORWARDED.pop(entry.entry_id, None)
     return unload_ok
 
 

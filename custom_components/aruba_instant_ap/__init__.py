@@ -96,7 +96,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     platforms = _FORWARDED.get(entry.entry_id, _entry_platforms(entry))
     unload_ok = await hass.config_entries.async_unload_platforms(entry, platforms)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id, None)
+        coordinator = hass.data[DOMAIN].pop(entry.entry_id, None)
+        if coordinator is not None:
+            # Cancel the periodic refresh and any in-flight listener flush.
+            await coordinator.async_shutdown()
         _FORWARDED.pop(entry.entry_id, None)
     return unload_ok
 

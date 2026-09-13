@@ -23,7 +23,9 @@ async def test_unload_uses_forwarded_platforms_not_current_options(hass):
     entry.add_to_hass(hass)
     # prior setup ran while the tracker was disabled → only these were forwarded
     aruba._FORWARDED["e1"] = [Platform.BINARY_SENSOR, Platform.SENSOR]
-    hass.data.setdefault(DOMAIN, {})["e1"] = MagicMock()
+    coordinator = MagicMock()
+    coordinator.async_shutdown = AsyncMock()
+    hass.data.setdefault(DOMAIN, {})["e1"] = coordinator
 
     with patch.object(
         hass.config_entries, "async_unload_platforms", AsyncMock(return_value=True)
@@ -33,4 +35,5 @@ async def test_unload_uses_forwarded_platforms_not_current_options(hass):
     mock_unload.assert_awaited_once_with(
         entry, [Platform.BINARY_SENSOR, Platform.SENSOR]
     )
+    coordinator.async_shutdown.assert_awaited_once()  # refresh + flush stopped
     assert "e1" not in aruba._FORWARDED

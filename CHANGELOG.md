@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.22](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.21...v0.0.22) (2026-09-13)
+
+
+### Performance Improvements
+
+* spread a poll's entity writes across event-loop ticks ([#145](https://github.com/bakerkj/ha-aruba-ap/issues/145)) ([d7db7fd](https://github.com/bakerkj/ha-aruba-ap/commit/d7db7fdc9f5cbfb67742afe9f5d142bf4f979958))
+
 ## [0.0.21](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.20...v0.0.21) (2026-09-11)
 
 

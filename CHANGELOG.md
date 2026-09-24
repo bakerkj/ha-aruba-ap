@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.0.23](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.22...v0.0.23) (2026-09-24)
+
+
+### Bug Fixes
+
+* **renovate:** don't duplicate runs-on detection with the built-in manager ([#152](https://github.com/bakerkj/ha-aruba-ap/issues/152)) ([e079514](https://github.com/bakerkj/ha-aruba-ap/commit/e079514689cf4b69bfa077bd7420fc6f7c4f93d0))
+
+
+### Miscellaneous Chores
+
+* **deps:** update anthropics/claude-code-action action to v1.0.225 ([#147](https://github.com/bakerkj/ha-aruba-ap/issues/147)) ([d2a358c](https://github.com/bakerkj/ha-aruba-ap/commit/d2a358c641ed0d61513596286782f86425e5e01f))
+* **deps:** update anthropics/claude-code-action action to v1.0.226 ([#150](https://github.com/bakerkj/ha-aruba-ap/issues/150)) ([83f7006](https://github.com/bakerkj/ha-aruba-ap/commit/83f70063bd1a6a2ddcd5c1236d16dbd2b313dec7))
+* **deps:** update anthropics/claude-code-action action to v1.0.231 ([#158](https://github.com/bakerkj/ha-aruba-ap/issues/158)) ([5a000a1](https://github.com/bakerkj/ha-aruba-ap/commit/5a000a138d590c5a9737f9952e725dc890a74fe6))
+* **deps:** update astral-sh/setup-uv action to v10.2.0 ([#161](https://github.com/bakerkj/ha-aruba-ap/issues/161)) ([4eb1dbe](https://github.com/bakerkj/ha-aruba-ap/commit/4eb1dbed0ebf4422576416f07a73f70e37e771d4))
+* **deps:** update dependency ubuntu to v26 ([#157](https://github.com/bakerkj/ha-aruba-ap/issues/157)) ([1de1020](https://github.com/bakerkj/ha-aruba-ap/commit/1de1020c734f109b6a61b2808841f22e9006a142))
+* **deps:** update dependency uv to v0.12.14 ([#148](https://github.com/bakerkj/ha-aruba-ap/issues/148)) ([d20e443](https://github.com/bakerkj/ha-aruba-ap/commit/d20e443a0f74c7a7d48e25871cd2dbfcb687cc3f))
+* **deps:** update dependency uv to v0.12.15 ([#151](https://github.com/bakerkj/ha-aruba-ap/issues/151)) ([f841fd8](https://github.com/bakerkj/ha-aruba-ap/commit/f841fd8787bc73f2363c1a4c782a1db9325793f8))
+* **deps:** update dependency uv to v0.12.17 ([#154](https://github.com/bakerkj/ha-aruba-ap/issues/154)) ([9ee59b8](https://github.com/bakerkj/ha-aruba-ap/commit/9ee59b88ad1a6b55e4e3cd658f32f5bff04fa1fd))
+* **deps:** update dependency uv to v0.12.18 ([#159](https://github.com/bakerkj/ha-aruba-ap/issues/159)) ([dec7388](https://github.com/bakerkj/ha-aruba-ap/commit/dec7388b530c2066ac3afb0b0596f5ca669c3587))
+* **deps:** update pre-commit hook alessandrojcm/commitlint-pre-commit-hook to v9.27.0 ([#160](https://github.com/bakerkj/ha-aruba-ap/issues/160)) ([306fa0e](https://github.com/bakerkj/ha-aruba-ap/commit/306fa0e865d6d02d48100d80a0af0ee7bbc1b21c))
+* **deps:** update pre-commit hook rbubley/mirrors-prettier to v3.9.7 ([#153](https://github.com/bakerkj/ha-aruba-ap/issues/153)) ([daceb83](https://github.com/bakerkj/ha-aruba-ap/commit/daceb83382704f8177cabcc689c1f807d766e56d))
+* **deps:** update pre-commit hooks ([#156](https://github.com/bakerkj/ha-aruba-ap/issues/156)) ([0a0c134](https://github.com/bakerkj/ha-aruba-ap/commit/0a0c134ea1c1086addc9d8358fd3d5d0406017f6))
+* **deps:** update pre-commit hooks ([#162](https://github.com/bakerkj/ha-aruba-ap/issues/162)) ([9254492](https://github.com/bakerkj/ha-aruba-ap/commit/92544924240adb148e62897c436d53a01a582e7b))
+* switch actionlint pre-commit hook from rhysd (stale) to kjanat fork ([#155](https://github.com/bakerkj/ha-aruba-ap/issues/155)) ([b9f6736](https://github.com/bakerkj/ha-aruba-ap/commit/b9f67361019d4d51664ea9a8b0287f1af38732e1))
+
 ## [0.0.22](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.21...v0.0.22) (2026-09-13)
 
 

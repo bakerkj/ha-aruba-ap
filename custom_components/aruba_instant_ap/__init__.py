@@ -27,6 +27,7 @@ from .const import (
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
 )
+from .device_tracker import purge_stranded_trackers
 from .sensor import ArubaAPCoordinator
 from .snmp_helper import async_prewarm_plugins
 
@@ -83,6 +84,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await async_prewarm_plugins(hass)
     platforms = _entry_platforms(entry)
+    # If device_tracker is disabled entirely for this entry, its platform
+    # won't be forwarded and its async_setup_entry won't run. Purge any
+    # stranded tracker registrations here instead, otherwise toggling the
+    # feature off would leave every prior tracker as a stale ``unavailable``
+    # entity in the registry forever.
+    if Platform.DEVICE_TRACKER not in platforms:
+        purge_stranded_trackers(hass, entry, set())
     _FORWARDED[entry.entry_id] = platforms
     await hass.config_entries.async_forward_entry_setups(entry, platforms)
     await coordinator.async_config_entry_first_refresh()

@@ -12,6 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant.components.device_tracker import SourceType
+from homeassistant.const import Platform
+from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aruba_instant_ap.const import (
@@ -151,3 +153,140 @@ async def test_trackers_created_once_at_setup(setup):
     added = await setup(_make_main([_MAC]), tracked=[_MAC])
     added[0].coordinator.async_set_updated_data({_MAC})
     assert len(added) == 1
+
+
+# ── Registry cleanup: stranded entities get purged on setup ──────────────────
+#
+# ``async_setup_entry`` only creates entities for the current allowlist. A MAC
+# that was once allowlisted and has since been removed from the option leaves
+# its registration behind. HA core restores that entity from storage on next
+# start, nothing drives its state, and it sits as ``unavailable`` forever. The
+# purge pass before the early-exit catches that.
+
+
+async def _preregister_tracker(hass, config_entry, mac: str) -> str:
+    """Register a device_tracker in the registry as if a previous setup had
+    created it, but without instantiating an entity. Returns the entity_id."""
+    reg = er.async_get(hass)
+    entry = reg.async_get_or_create(
+        domain=Platform.DEVICE_TRACKER,
+        platform=DOMAIN,
+        unique_id=mac,
+        config_entry=config_entry,
+    )
+    return entry.entity_id
+
+
+async def test_stranded_tracker_removed_on_setup(hass, setup):
+    """A device_tracker whose MAC is no longer in the allowlist is purged from
+    the entity registry on setup."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        entry_id="purge_entry",
+        options={CONF_TRACKED_CLIENTS: [_MAC]},
+    )
+    entry.add_to_hass(hass)
+    stale_eid = await _preregister_tracker(hass, entry, _OTHER_MAC)
+    reg = er.async_get(hass)
+    assert reg.async_get(stale_eid) is not None
+
+    main = _make_main([_MAC])
+    hass.data.setdefault(DOMAIN, {})["purge_entry"] = main
+    added: list = []
+    await async_setup_entry(hass, entry, lambda es, *_a, **_k: added.extend(es))
+    try:
+        assert reg.async_get(stale_eid) is None
+        assert {e._mac for e in added} == {_MAC}
+    finally:
+        if added:
+            await added[0].coordinator.async_shutdown()
+
+
+async def test_tracker_kept_when_still_in_allowlist(hass, setup):
+    """A device_tracker whose MAC is still in the current allowlist stays
+    put -- the purge removes only MACs that have left the allowlist."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        entry_id="keep_entry",
+        options={CONF_TRACKED_CLIENTS: [_MAC]},
+    )
+    entry.add_to_hass(hass)
+    kept_eid = await _preregister_tracker(hass, entry, _MAC)
+    reg = er.async_get(hass)
+
+    main = _make_main([_MAC])
+    hass.data.setdefault(DOMAIN, {})["keep_entry"] = main
+    added: list = []
+    await async_setup_entry(hass, entry, lambda es, *_a, **_k: added.extend(es))
+    try:
+        assert reg.async_get(kept_eid) is not None
+    finally:
+        if added:
+            await added[0].coordinator.async_shutdown()
+
+
+async def test_empty_allowlist_still_purges_stranded(hass):
+    """Emptying the allowlist entirely must still purge every prior
+    registration -- the early-exit for ``not tracked`` runs AFTER the purge
+    so 'remove everything' leaves nothing behind, instead of marooning every
+    former tracker as ``unavailable``."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        entry_id="empty_entry",
+        options={CONF_TRACKED_CLIENTS: []},
+    )
+    entry.add_to_hass(hass)
+    stale_a = await _preregister_tracker(hass, entry, _MAC)
+    stale_b = await _preregister_tracker(hass, entry, _OTHER_MAC)
+    reg = er.async_get(hass)
+
+    main = _make_main([])
+    hass.data.setdefault(DOMAIN, {})["empty_entry"] = main
+    added: list = []
+    await async_setup_entry(hass, entry, lambda es, *_a, **_k: added.extend(es))
+    assert added == []
+    assert reg.async_get(stale_a) is None
+    assert reg.async_get(stale_b) is None
+
+
+async def test_purge_scoped_to_own_platform_and_entry(hass):
+    """The purge only touches device_tracker entities whose platform is this
+    integration AND whose config_entry is the one being set up. A sensor on
+    the same entry, and a device_tracker from a different integration on a
+    different entry, both survive."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        entry_id="scope_entry",
+        options={CONF_TRACKED_CLIENTS: [_MAC]},
+    )
+    entry.add_to_hass(hass)
+    foreign_entry = MockConfigEntry(domain="foreign_domain", entry_id="foreign_entry")
+    foreign_entry.add_to_hass(hass)
+
+    reg = er.async_get(hass)
+    # Sensor on this integration's entry: survives (wrong domain).
+    sensor_eid = reg.async_get_or_create(
+        domain="sensor",
+        platform=DOMAIN,
+        unique_id=f"{_OTHER_MAC}_signal",
+        config_entry=entry,
+    ).entity_id
+    # device_tracker owned by a different integration: survives (wrong platform
+    # AND wrong config_entry).
+    foreign_eid = reg.async_get_or_create(
+        domain=Platform.DEVICE_TRACKER,
+        platform="foreign_domain",
+        unique_id=_OTHER_MAC,
+        config_entry=foreign_entry,
+    ).entity_id
+
+    main = _make_main([_MAC])
+    hass.data.setdefault(DOMAIN, {})["scope_entry"] = main
+    added: list = []
+    await async_setup_entry(hass, entry, lambda es, *_a, **_k: added.extend(es))
+    try:
+        assert reg.async_get(sensor_eid) is not None
+        assert reg.async_get(foreign_eid) is not None
+    finally:
+        if added:
+            await added[0].coordinator.async_shutdown()

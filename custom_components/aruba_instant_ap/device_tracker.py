@@ -19,7 +19,9 @@ from typing import Any
 
 from homeassistant.components.device_tracker import ScannerEntity, SourceType
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -108,6 +110,35 @@ class ArubaClientTracker(CoordinatorEntity[ArubaPresenceCoordinator], ScannerEnt
         super()._handle_coordinator_update()
 
 
+def purge_stranded_trackers(
+    hass: HomeAssistant, entry: ConfigEntry, tracked: set[str]
+) -> None:
+    """Remove device_tracker entities from the registry whose MAC is no longer
+    in the allowlist. ``async_setup_entry`` only creates entities for the
+    current allowlist, so without this pass a MAC that gets removed from the
+    option leaves its registration behind, HA restores it from storage on the
+    next start, and nothing drives its state -- it sits as ``unavailable``
+    forever. Scoped by platform + domain + this entry id and keyed on the
+    lowercase MAC (same as ``ArubaClientTracker.unique_id``).
+
+    Public so ``__init__.async_setup_entry`` can also call it with an empty
+    allowlist when the whole device_tracker feature is turned off (in which
+    case this platform's own ``async_setup_entry`` is never forwarded)."""
+    registry = er.async_get(hass)
+    for ent in list(er.async_entries_for_config_entry(registry, entry.entry_id)):
+        if (
+            ent.domain == Platform.DEVICE_TRACKER
+            and ent.platform == DOMAIN
+            and ent.unique_id.lower() not in tracked
+        ):
+            _LOGGER.info(
+                "Removing stranded device_tracker %s (MAC %s not in tracked_clients)",
+                ent.entity_id,
+                ent.unique_id,
+            )
+            registry.async_remove(ent.entity_id)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -117,6 +148,9 @@ async def async_setup_entry(
     main: ArubaAPCoordinator = hass.data[DOMAIN][entry.entry_id]
     # Explicit opt-in allowlist; empty means track nothing, so skip the poll.
     tracked = {m.lower() for m in entry.options.get(CONF_TRACKED_CLIENTS, [])}
+    # Clean up before the early-exit so emptying the allowlist entirely still
+    # purges every prior registration instead of leaving them all stranded.
+    purge_stranded_trackers(hass, entry, tracked)
     if not tracked:
         return
     interval = entry.options.get(CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL)

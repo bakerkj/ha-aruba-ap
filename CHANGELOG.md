@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.24](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.23...v0.0.24) (2026-10-10)
+
+
+### Miscellaneous Chores
+
+* **deps:** update anthropics/claude-code-action action to v1.0.244 ([#173](https://github.com/bakerkj/ha-aruba-ap/issues/173)) ([27850f0](https://github.com/bakerkj/ha-aruba-ap/commit/27850f02105cdd3c255b1fcab7f3f0bc3747782b))
+* **deps:** update dependency uv to v0.12.23 ([#170](https://github.com/bakerkj/ha-aruba-ap/issues/170)) ([25b11a0](https://github.com/bakerkj/ha-aruba-ap/commit/25b11a05f56972067f990b9148c76d9387c88f86))
+* **deps:** update dependency uv to v0.13.0 ([#176](https://github.com/bakerkj/ha-aruba-ap/issues/176)) ([d41ec9d](https://github.com/bakerkj/ha-aruba-ap/commit/d41ec9da5cf2bdcd559f2d57ec2db17afd346ed5))
+* **deps:** update github-actions ([#171](https://github.com/bakerkj/ha-aruba-ap/issues/171)) ([9ccee76](https://github.com/bakerkj/ha-aruba-ap/commit/9ccee76cd8b5a0d87f4af82ec39452daf45b0bdf))
+* **deps:** update github-actions ([#175](https://github.com/bakerkj/ha-aruba-ap/issues/175)) ([5913e9a](https://github.com/bakerkj/ha-aruba-ap/commit/5913e9a84f246a263503c373c3083be37007d316))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.17.0 ([#174](https://github.com/bakerkj/ha-aruba-ap/issues/174)) ([81e5207](https://github.com/bakerkj/ha-aruba-ap/commit/81e5207693fe2676b321f6bebf8e66e8efb93916))
+
 ## [0.0.23](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.22...v0.0.23) (2026-10-02)
 
 

@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.0.24](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.23...v0.0.24) (2026-10-30)
+
+
+### Bug Fixes
+
+* **deps:** pin the HA test plugin so the locked HA tracks releases ([#191](https://github.com/bakerkj/ha-aruba-ap/issues/191)) ([d708df9](https://github.com/bakerkj/ha-aruba-ap/commit/d708df9bfa63d01520e43191335119f9da33cd1a))
+
+
+### Miscellaneous Chores
+
+* **ci:** standardize uv usage across workflows ([#190](https://github.com/bakerkj/ha-aruba-ap/issues/190)) ([b1b1d88](https://github.com/bakerkj/ha-aruba-ap/commit/b1b1d88f0bb3a4a5cc065a9f4d55fc6995e70312))
+* **deps:** lock file maintenance ([#192](https://github.com/bakerkj/ha-aruba-ap/issues/192)) ([5eda25e](https://github.com/bakerkj/ha-aruba-ap/commit/5eda25ef15389f0f7682b4a0543ba79938d62c3a))
+* **deps:** lock file maintenance ([#196](https://github.com/bakerkj/ha-aruba-ap/issues/196)) ([d6965b1](https://github.com/bakerkj/ha-aruba-ap/commit/d6965b107b97451b98cb14693a9f1d2a402da3a0))
+* **deps:** lock file maintenance ([#198](https://github.com/bakerkj/ha-aruba-ap/issues/198)) ([a1bd451](https://github.com/bakerkj/ha-aruba-ap/commit/a1bd451e20df6ceb082bbd9f696c5006d1825ab2))
+* **deps:** lock file maintenance ([#199](https://github.com/bakerkj/ha-aruba-ap/issues/199)) ([438172b](https://github.com/bakerkj/ha-aruba-ap/commit/438172b358d3121ffb368008465320f46ab67522))
+* **deps:** update anthropics/claude-code-action action to v1.0.244 ([#173](https://github.com/bakerkj/ha-aruba-ap/issues/173)) ([27850f0](https://github.com/bakerkj/ha-aruba-ap/commit/27850f02105cdd3c255b1fcab7f3f0bc3747782b))
+* **deps:** update anthropics/claude-code-action action to v1.0.263 ([#193](https://github.com/bakerkj/ha-aruba-ap/issues/193)) ([1a0b806](https://github.com/bakerkj/ha-aruba-ap/commit/1a0b8069e54a56ea73f81bf136c41340c1ce6300))
+* **deps:** update dependency uv to v0.12.23 ([#170](https://github.com/bakerkj/ha-aruba-ap/issues/170)) ([25b11a0](https://github.com/bakerkj/ha-aruba-ap/commit/25b11a05f56972067f990b9148c76d9387c88f86))
+* **deps:** update dependency uv to v0.13.0 ([#176](https://github.com/bakerkj/ha-aruba-ap/issues/176)) ([d41ec9d](https://github.com/bakerkj/ha-aruba-ap/commit/d41ec9da5cf2bdcd559f2d57ec2db17afd346ed5))
+* **deps:** update dependency uv to v0.13.1 ([#180](https://github.com/bakerkj/ha-aruba-ap/issues/180)) ([534a231](https://github.com/bakerkj/ha-aruba-ap/commit/534a2312158685258e48a2a755eb28c8bb1914fd))
+* **deps:** update dependency uv to v0.13.4 ([#185](https://github.com/bakerkj/ha-aruba-ap/issues/185)) ([0fbd465](https://github.com/bakerkj/ha-aruba-ap/commit/0fbd465f05924a9663b5a1d540ed314412a7eb11))
+* **deps:** update dependency uv to v0.13.5 ([#188](https://github.com/bakerkj/ha-aruba-ap/issues/188)) ([e4fd311](https://github.com/bakerkj/ha-aruba-ap/commit/e4fd31101c54b8ccdfbe727515ab08367abab260))
+* **deps:** update dependency uv to v0.13.6 ([#194](https://github.com/bakerkj/ha-aruba-ap/issues/194)) ([8df23e9](https://github.com/bakerkj/ha-aruba-ap/commit/8df23e9d24e57b72f6a7e3fbb27affe6160b059d))
+* **deps:** update github-actions ([#171](https://github.com/bakerkj/ha-aruba-ap/issues/171)) ([9ccee76](https://github.com/bakerkj/ha-aruba-ap/commit/9ccee76cd8b5a0d87f4af82ec39452daf45b0bdf))
+* **deps:** update github-actions ([#175](https://github.com/bakerkj/ha-aruba-ap/issues/175)) ([5913e9a](https://github.com/bakerkj/ha-aruba-ap/commit/5913e9a84f246a263503c373c3083be37007d316))
+* **deps:** update github-actions ([#182](https://github.com/bakerkj/ha-aruba-ap/issues/182)) ([33909d8](https://github.com/bakerkj/ha-aruba-ap/commit/33909d8601f33d46351a0f338c7da18d3c58155b))
+* **deps:** update github-actions ([#183](https://github.com/bakerkj/ha-aruba-ap/issues/183)) ([87b8d72](https://github.com/bakerkj/ha-aruba-ap/commit/87b8d72233ee00c2bc436c90bd0ab9d4b2ccc97a))
+* **deps:** update github-actions ([#184](https://github.com/bakerkj/ha-aruba-ap/issues/184)) ([77e1a29](https://github.com/bakerkj/ha-aruba-ap/commit/77e1a2901c7c4cb638d2961def01e99e014fe307))
+* **deps:** update github-actions ([#187](https://github.com/bakerkj/ha-aruba-ap/issues/187)) ([7ab9f30](https://github.com/bakerkj/ha-aruba-ap/commit/7ab9f30ba766825f85dac8b71a68561c0d0839b3))
+* **deps:** update github-actions ([#197](https://github.com/bakerkj/ha-aruba-ap/issues/197)) ([2402d82](https://github.com/bakerkj/ha-aruba-ap/commit/2402d82247c471b70001447445fd7f4c73613aa0))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.17.0 ([#174](https://github.com/bakerkj/ha-aruba-ap/issues/174)) ([81e5207](https://github.com/bakerkj/ha-aruba-ap/commit/81e5207693fe2676b321f6bebf8e66e8efb93916))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.17.1 ([#181](https://github.com/bakerkj/ha-aruba-ap/issues/181)) ([c8b64c9](https://github.com/bakerkj/ha-aruba-ap/commit/c8b64c98eaac70df426eadab25c8f7b3808c16ad))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.17.2 ([#186](https://github.com/bakerkj/ha-aruba-ap/issues/186)) ([818415f](https://github.com/bakerkj/ha-aruba-ap/commit/818415f544caefeda60fd2ad3ee60a35003c8d5f))
+* **deps:** update pre-commit hook rbubley/mirrors-prettier to v3.9.10 ([#177](https://github.com/bakerkj/ha-aruba-ap/issues/177)) ([ca823c3](https://github.com/bakerkj/ha-aruba-ap/commit/ca823c35da382c9f3a2a63cd89a3269436a0e324))
+* **deps:** update pre-commit hooks ([#195](https://github.com/bakerkj/ha-aruba-ap/issues/195)) ([b0fc8bb](https://github.com/bakerkj/ha-aruba-ap/commit/b0fc8bb27eba33a3e95b345632fb9cf6168d0857))
+* **renovate:** enable lockFileMaintenance ([#189](https://github.com/bakerkj/ha-aruba-ap/issues/189)) ([5182c34](https://github.com/bakerkj/ha-aruba-ap/commit/5182c348af9dcd6c7460da8eb09271cfbea33e4d))
+
+
+### Continuous Integration
+
+* **claude:** gate on-demand [@claude](https://github.com/claude) workflow to repo owner ([#178](https://github.com/bakerkj/ha-aruba-ap/issues/178)) ([0cd975b](https://github.com/bakerkj/ha-aruba-ap/commit/0cd975bb5738dee5d87c893dc135c0f8e4d682ae))
+
 ## [0.0.23](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.22...v0.0.23) (2026-10-02)
 
 

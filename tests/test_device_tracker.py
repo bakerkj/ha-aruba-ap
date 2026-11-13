@@ -13,8 +13,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from homeassistant.components.device_tracker import SourceType
 from homeassistant.const import Platform
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    MockEntityPlatform,
+)
 
 from custom_components.aruba_instant_ap.const import (
     CONF_ENABLE_DEVICE_TRACKER,
@@ -26,6 +30,7 @@ from custom_components.aruba_instant_ap.device_tracker import (
     ArubaClientTracker,
     async_setup_entry,
 )
+from custom_components.aruba_instant_ap.sensor import client_device_info
 
 _MAC = "40:2f:86:40:5e:86"
 _OTHER_MAC = "24:e8:53:6c:8c:90"
@@ -153,6 +158,119 @@ async def test_trackers_created_once_at_setup(setup):
     added = await setup(_make_main([_MAC]), tracked=[_MAC])
     added[0].coordinator.async_set_updated_data({_MAC})
     assert len(added) == 1
+
+
+async def test_allowlisted_tracker_registers_enabled_with_unknown_mac(hass):
+    """Added for real, with no device holding the MAC, it must not start disabled."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, entry_id="real_entry", options={CONF_TRACKED_CLIENTS: [_MAC]}
+    )
+    entry.add_to_hass(hass)
+    added = await _run_with_entry(hass, entry, _make_main([_MAC]))
+    platform = MockEntityPlatform(
+        hass, domain=Platform.DEVICE_TRACKER, platform_name=DOMAIN
+    )
+    platform.config_entry = entry
+    try:
+        await platform.async_add_entities(added)
+        reg_entry = er.async_get(hass).async_get_entity_id(
+            Platform.DEVICE_TRACKER, DOMAIN, _MAC
+        )
+        assert er.async_get(hass).async_get(reg_entry).disabled_by is None
+        assert hass.states.get(reg_entry).state == "home"
+    finally:
+        await platform.async_reset()
+        await added[0].coordinator.async_shutdown()
+
+
+async def test_tracker_describes_the_client_device(setup):
+    added = await setup(_make_main([_MAC]))
+    info = added[0]._attr_device_info
+    assert info == client_device_info("test_entry", _MAC, f"lg-washer / {_MAC}")
+    assert (dr.CONNECTION_NETWORK_MAC, _MAC) in info["connections"]
+
+
+async def test_absent_new_client_device_named_by_mac(setup):
+    added = await setup(_make_main([], clients=[]))
+    assert added[0]._attr_device_info["name"] == _MAC
+
+
+async def _run_with_entry(hass, entry, main) -> list[ArubaClientTracker]:
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = main
+    added: list = []
+    await async_setup_entry(hass, entry, lambda es, *_a, **_k: added.extend(es))
+    return added
+
+
+async def test_absent_client_keeps_existing_device_name(hass):
+    """Registering the bare MAC for an away client must not rename its device."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, entry_id="name_entry", options={CONF_TRACKED_CLIENTS: [_MAC]}
+    )
+    entry.add_to_hass(hass)
+    existing = client_device_info("name_entry", _MAC, f"lg-washer / {_MAC}")
+    dr.async_get(hass).async_get_or_create(config_entry_id=entry.entry_id, **existing)
+
+    added = await _run_with_entry(hass, entry, _make_main([], clients=[]))
+    try:
+        assert added[0]._attr_device_info["name"] == f"lg-washer / {_MAC}"
+    finally:
+        await added[0].coordinator.async_shutdown()
+
+
+@pytest.mark.parametrize(
+    ("disabled_by", "expected"),
+    [
+        (er.RegistryEntryDisabler.INTEGRATION, None),
+        (er.RegistryEntryDisabler.USER, er.RegistryEntryDisabler.USER),
+    ],
+)
+async def test_allowlisted_tracker_reenabled_unless_user_disabled(
+    hass, disabled_by, expected
+):
+    entry = MockConfigEntry(
+        domain=DOMAIN, entry_id="enable_entry", options={CONF_TRACKED_CLIENTS: [_MAC]}
+    )
+    entry.add_to_hass(hass)
+    reg = er.async_get(hass)
+    entity_id = reg.async_get_or_create(
+        domain=Platform.DEVICE_TRACKER,
+        platform=DOMAIN,
+        unique_id=_MAC,
+        config_entry=entry,
+        disabled_by=disabled_by,
+    ).entity_id
+
+    added = await _run_with_entry(hass, entry, _make_main([_MAC]))
+    try:
+        assert reg.async_get(entity_id).disabled_by is expected
+    finally:
+        await added[0].coordinator.async_shutdown()
+
+
+async def test_reenable_leaves_other_platforms_alone(hass):
+    """A disabled tracker of another integration with the same MAC is untouched."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, entry_id="other_entry", options={CONF_TRACKED_CLIENTS: [_MAC]}
+    )
+    entry.add_to_hass(hass)
+    reg = er.async_get(hass)
+    other = reg.async_get_or_create(
+        domain=Platform.DEVICE_TRACKER,
+        platform="other_integration",
+        unique_id=_MAC,
+        config_entry=entry,
+        disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+    )
+
+    added = await _run_with_entry(hass, entry, _make_main([_MAC]))
+    try:
+        assert (
+            reg.async_get(other.entity_id).disabled_by
+            is er.RegistryEntryDisabler.INTEGRATION
+        )
+    finally:
+        await added[0].coordinator.async_shutdown()
 
 
 # ── Registry cleanup: stranded entities get purged on setup ──────────────────

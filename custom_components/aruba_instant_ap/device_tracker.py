@@ -21,7 +21,9 @@ from homeassistant.components.device_tracker import ScannerEntity, SourceType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -35,7 +37,7 @@ from .const import (
     DEFAULT_PRESENCE_INTERVAL,
     DOMAIN,
 )
-from .sensor import ArubaAPCoordinator
+from .sensor import ArubaAPCoordinator, _client_display_name, client_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,14 +66,22 @@ class ArubaPresenceCoordinator(DataUpdateCoordinator[set[str]]):
 class ArubaClientTracker(CoordinatorEntity[ArubaPresenceCoordinator], ScannerEntity):
     """Presence of one WiFi client, from the AP's associated-station table.
 
-    A ``ScannerEntity`` keys itself by ``mac_address`` (its unique_id) and
-    creates no device of its own — HA links it to whichever device already
-    carries that MAC connection, i.e. the client device the sensor platform
-    registered. ``name``/``hostname``/``ip`` are read best-effort from the full
-    telemetry coordinator and refreshed on each presence update.
+    A ``ScannerEntity`` keys itself by ``mac_address`` (its unique_id) and shares
+    the client device the sensor platform registers. ``name``/``hostname``/``ip``
+    are read best-effort from the full telemetry coordinator and refreshed on
+    each presence update.
     """
 
     _attr_source_type = SourceType.ROUTER
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Every tracker here was explicitly allowlisted, unlike a scanned client.
+
+        A property, not ``_attr_``: before 2026.11 core computes this from
+        whether a device with the MAC is known, ignoring the attribute.
+        """
+        return True
 
     def __init__(
         self,
@@ -84,6 +94,8 @@ class ArubaClientTracker(CoordinatorEntity[ArubaPresenceCoordinator], ScannerEnt
         self._main = main
         self._mac = mac.lower()  # canonical; AP reports/stores MACs lowercase
         self._attr_mac_address = self._mac
+        # Core types this as None before 2026.11, which is when it starts reading it.
+        self._attr_device_info = self._build_device_info(entry_id)  # type: ignore[assignment]
         self._refresh_client_attrs()
 
     def _client(self) -> dict[str, Any] | None:
@@ -92,6 +104,25 @@ class ArubaClientTracker(CoordinatorEntity[ArubaPresenceCoordinator], ScannerEnt
         if data is None:
             return None
         return next((c for c in data.clients if c["mac"].lower() == self._mac), None)
+
+    def _build_device_info(self, entry_id: str) -> DeviceInfo:
+        """The client's device, without renaming it while the client is away.
+
+        An absent client has no known name, and registering the bare MAC would
+        overwrite the name the device already has. Core only reads this from
+        2026.11; before that ``ScannerEntity.device_info`` is always None.
+        """
+        client = self._client()
+        info = client_device_info(
+            entry_id, self._mac, _client_display_name(client, self._mac)
+        )
+        if not (client and client.get("name")):
+            registry = dr.async_get(self.coordinator.hass)
+            for identifier in info["identifiers"]:
+                device = registry.async_get_device_by_identifier(identifier, entry_id)
+                if device is not None and device.name:
+                    info["name"] = device.name
+        return info
 
     def _refresh_client_attrs(self) -> None:
         client = self._client()
@@ -139,6 +170,25 @@ def purge_stranded_trackers(
             registry.async_remove(ent.entity_id)
 
 
+def enable_allowlisted_trackers(
+    hass: HomeAssistant, entry: ConfigEntry, tracked: set[str]
+) -> None:
+    """Enable allowlisted trackers left disabled by core's scanner default.
+
+    Only ``disabled_by=integration`` is cleared, so a tracker the user disabled
+    stays disabled."""
+    registry = er.async_get(hass)
+    for ent in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if (
+            ent.domain == Platform.DEVICE_TRACKER
+            and ent.platform == DOMAIN
+            and ent.unique_id.lower() in tracked
+            and ent.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+        ):
+            _LOGGER.info("Enabling allowlisted device_tracker %s", ent.entity_id)
+            registry.async_update_entity(ent.entity_id, disabled_by=None)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -153,6 +203,7 @@ async def async_setup_entry(
     purge_stranded_trackers(hass, entry, tracked)
     if not tracked:
         return
+    enable_allowlisted_trackers(hass, entry, tracked)
     interval = entry.options.get(CONF_PRESENCE_INTERVAL, DEFAULT_PRESENCE_INTERVAL)
     presence = ArubaPresenceCoordinator(hass, main, interval)
     # Refresh once so initial home/away + names are right; a poll failure must

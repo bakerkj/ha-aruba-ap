@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.25](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.24...v0.0.25) (2026-11-21)
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#214](https://github.com/bakerkj/ha-aruba-ap/issues/214)) ([1da7661](https://github.com/bakerkj/ha-aruba-ap/commit/1da76616aecad5c6d69514403f934410e1e6bea1))
+* **deps:** update dependency uv to v0.13.9 ([#216](https://github.com/bakerkj/ha-aruba-ap/issues/216)) ([5ae21a7](https://github.com/bakerkj/ha-aruba-ap/commit/5ae21a7b1ff793299c820772ee171f0a0639a150))
+* **deps:** update github-actions ([#213](https://github.com/bakerkj/ha-aruba-ap/issues/213)) ([0e36de9](https://github.com/bakerkj/ha-aruba-ap/commit/0e36de9f7ef210237e721dcb7b4a47c76546a048))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.17.6 ([#217](https://github.com/bakerkj/ha-aruba-ap/issues/217)) ([a1a3939](https://github.com/bakerkj/ha-aruba-ap/commit/a1a3939b75566eb8f0c386ca0c2001ee19125727))
+
 ## [0.0.24](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.23...v0.0.24) (2026-11-16)
 
 

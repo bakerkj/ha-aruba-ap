@@ -10,6 +10,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
@@ -26,15 +27,21 @@ from .const import (
     DEFAULT_SNMP_PORT,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
+    OID_SYS_NAME,
 )
 from .device_tracker import purge_stranded_trackers
 from .sensor import ArubaAPCoordinator
-from .snmp_helper import async_prewarm_plugins
+from .snmp_helper import async_prewarm_plugins, async_snmp_get
 
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
+
+# Reachability probe at setup: one sysName GET, kept short so a controller that
+# is down is reported within seconds instead of after the full poll's timeouts.
+REACHABILITY_TIMEOUT_S = 5
+REACHABILITY_RETRIES = 1
 
 # Platforms actually forwarded per entry, so unload matches setup even when the
 # option changed in between (enabling device_tracker triggers a reload — unload
@@ -68,6 +75,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         1, entry.options.get(CONF_RECORD_DECIMATION, DEFAULT_RECORD_DECIMATION)
     )
 
+    await async_prewarm_plugins(hass)
+
+    # A controller that is down would otherwise cost the full poll's SNMP
+    # timeouts at startup and then load with empty data. ConfigEntryNotReady
+    # puts the entry in setup_retry instead, so HA retries with backoff and the
+    # entry loads once the controller answers.
+    sys_name = await async_snmp_get(
+        host,
+        community,
+        snmp_port,
+        OID_SYS_NAME,
+        timeout=REACHABILITY_TIMEOUT_S,
+        retries=REACHABILITY_RETRIES,
+        snmp_version=snmp_version,
+    )
+    if sys_name is None:
+        raise ConfigEntryNotReady(f"No SNMP response from {host}:{snmp_port}")
+
     coordinator = ArubaAPCoordinator(
         hass,
         host,
@@ -82,7 +107,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    await async_prewarm_plugins(hass)
     platforms = _entry_platforms(entry)
     # If device_tracker is disabled entirely for this entry, its platform
     # won't be forwarded and its async_setup_entry won't run. Purge any

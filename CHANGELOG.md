@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.0.25](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.24...v0.0.25) (2026-11-24)
+
+
+### Bug Fixes
+
+* **setup:** retry setup and fail polls when the controller is down ([#219](https://github.com/bakerkj/ha-aruba-ap/issues/219)) ([4bd507f](https://github.com/bakerkj/ha-aruba-ap/commit/4bd507f8f821e3a7b83eb5bf929bce24cfdd2c3f))
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#214](https://github.com/bakerkj/ha-aruba-ap/issues/214)) ([1da7661](https://github.com/bakerkj/ha-aruba-ap/commit/1da76616aecad5c6d69514403f934410e1e6bea1))
+* **deps:** lock file maintenance ([#221](https://github.com/bakerkj/ha-aruba-ap/issues/221)) ([dd9ea78](https://github.com/bakerkj/ha-aruba-ap/commit/dd9ea784cfe4c7bd3e63f2316f25b8ad661e47e7))
+* **deps:** update dependency uv to v0.13.9 ([#216](https://github.com/bakerkj/ha-aruba-ap/issues/216)) ([5ae21a7](https://github.com/bakerkj/ha-aruba-ap/commit/5ae21a7b1ff793299c820772ee171f0a0639a150))
+* **deps:** update github-actions ([#213](https://github.com/bakerkj/ha-aruba-ap/issues/213)) ([0e36de9](https://github.com/bakerkj/ha-aruba-ap/commit/0e36de9f7ef210237e721dcb7b4a47c76546a048))
+* **deps:** update github-actions ([#218](https://github.com/bakerkj/ha-aruba-ap/issues/218)) ([d5c07c2](https://github.com/bakerkj/ha-aruba-ap/commit/d5c07c2a6a0c69c904ec250ea339958af599d5f6))
+* **deps:** update github-actions ([#220](https://github.com/bakerkj/ha-aruba-ap/issues/220)) ([83d4ac1](https://github.com/bakerkj/ha-aruba-ap/commit/83d4ac1a7a4714e55cc4729afe0ea2682b2560de))
+* **deps:** update pre-commit hook astral-sh/ruff-pre-commit to v0.17.6 ([#217](https://github.com/bakerkj/ha-aruba-ap/issues/217)) ([a1a3939](https://github.com/bakerkj/ha-aruba-ap/commit/a1a3939b75566eb8f0c386ca0c2001ee19125727))
+
 ## [0.0.24](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.23...v0.0.24) (2026-11-16)
 
 

@@ -555,6 +555,8 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
     async def _async_update_data(self) -> ArubaClusterData:
         try:
             return await self._fetch_data()
+        except UpdateFailed:
+            raise
         except Exception as err:
             _LOGGER.exception("Update failed for %s", self.host)
             raise UpdateFailed(str(err)) from err
@@ -562,54 +564,7 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
     async def _fetch_data(self) -> ArubaClusterData:
         """Fetch all cluster data via parallel SNMP walks."""
         self._poll_cycle += 1
-        (
-            ap_name_raw,
-            ap_ip_raw,
-            ap_model_raw,
-            ap_serial_raw,
-            ap_uptime_raw,
-            ap_status_raw,
-            ap_role_raw,
-            ap_firmware_raw,
-            ap_cpu_raw,
-            ap_mem_free_raw,
-            ap_mem_total_raw,
-            radio_channel_raw,
-            radio_txpow_raw,
-            radio_clients_raw,
-            radio_util_raw,
-            radio_status_raw,
-            radio_noise_floor_raw,
-            radio_tx_total_frames_raw,
-            radio_tx_mgmt_raw,
-            radio_tx_data_frames_raw,
-            radio_tx_bytes_raw,
-            radio_tx_dropped_raw,
-            radio_rx_total_frames_raw,
-            radio_rx_data_frames_raw,
-            radio_rx_bytes_raw,
-            radio_rx_mgmt_raw,
-            radio_rx_bad_raw,
-            radio_phy_events_raw,
-            radio_util64_raw,
-            radio_bssid_raw,
-            bss_ssid_raw,
-            bss_bssid_raw,
-            cl_ip_raw,
-            cl_bssid_raw,
-            cl_snr_raw,
-            cl_tx_raw,
-            cl_rx_raw,
-            cl_tx_retries_raw,
-            cl_rx_retries_raw,
-            cl_phy_type_raw,
-            cl_ht_mode_raw,
-            cl_speed_raw,
-            cl_rx_rate_raw,
-            cl_uptime_raw,
-            cl_hostname_raw,
-            cl_os_raw,
-        ) = await asyncio.gather(
+        results = await asyncio.gather(
             self._walk(OID_AP_NAME),
             self._walk(OID_AP_IP),
             self._walk(OID_AP_MODEL),
@@ -658,6 +613,62 @@ class ArubaAPCoordinator(DataUpdateCoordinator[ArubaClusterData]):
             self._walk(OID_CLIENT_OS),
             return_exceptions=True,
         )
+
+        # Each walk swallows its own SNMP errors and returns {}, so a controller
+        # that is down produces an all-empty poll rather than an exception.
+        # Report that as a failed update so entities go unavailable instead of
+        # showing an empty cluster.
+        if not any(_safe_walk(raw) for raw in results):
+            raise UpdateFailed(f"No SNMP data from {self.host}")
+
+        (
+            ap_name_raw,
+            ap_ip_raw,
+            ap_model_raw,
+            ap_serial_raw,
+            ap_uptime_raw,
+            ap_status_raw,
+            ap_role_raw,
+            ap_firmware_raw,
+            ap_cpu_raw,
+            ap_mem_free_raw,
+            ap_mem_total_raw,
+            radio_channel_raw,
+            radio_txpow_raw,
+            radio_clients_raw,
+            radio_util_raw,
+            radio_status_raw,
+            radio_noise_floor_raw,
+            radio_tx_total_frames_raw,
+            radio_tx_mgmt_raw,
+            radio_tx_data_frames_raw,
+            radio_tx_bytes_raw,
+            radio_tx_dropped_raw,
+            radio_rx_total_frames_raw,
+            radio_rx_data_frames_raw,
+            radio_rx_bytes_raw,
+            radio_rx_mgmt_raw,
+            radio_rx_bad_raw,
+            radio_phy_events_raw,
+            radio_util64_raw,
+            radio_bssid_raw,
+            bss_ssid_raw,
+            bss_bssid_raw,
+            cl_ip_raw,
+            cl_bssid_raw,
+            cl_snr_raw,
+            cl_tx_raw,
+            cl_rx_raw,
+            cl_tx_retries_raw,
+            cl_rx_retries_raw,
+            cl_phy_type_raw,
+            cl_ht_mode_raw,
+            cl_speed_raw,
+            cl_rx_rate_raw,
+            cl_uptime_raw,
+            cl_hostname_raw,
+            cl_os_raw,
+        ) = results
 
         # ── AP table (indexed by MAC) ──────────────────────────────────────
         ap_names = _parse_mac_table(_safe_walk(ap_name_raw), OID_AP_NAME)

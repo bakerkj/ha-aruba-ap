@@ -57,6 +57,7 @@ async def _setup_entry_with_mocks(
     with (
         patch.object(aruba, "ArubaAPCoordinator", return_value=coord),
         patch.object(aruba, "async_prewarm_plugins", AsyncMock()),
+        patch.object(aruba, "async_snmp_get", AsyncMock(return_value="ap")),
         patch.object(hass.config_entries, "async_forward_entry_setups", AsyncMock()),
     ):
         assert await aruba.async_setup_entry(hass, entry)

@@ -14,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from custom_components.aruba_instant_ap.const import (
+    OID_AP_NAME,
     OID_CLIENT_IP,
     OID_CLIENT_UPTIME,
 )
@@ -36,7 +37,12 @@ def _walk(uptime_seconds: int | None):
 
     async def _fake_walk(oid: str) -> dict[str, str]:
         if uptime_seconds is None:
-            return {}
+            # The controller still answers; only the client is gone.
+            return (
+                {f"{OID_AP_NAME}.64.47.134.64.94.134": "ap-1"}
+                if oid == OID_AP_NAME
+                else {}
+            )
         if oid == OID_CLIENT_IP:
             return {f"{OID_CLIENT_IP}.{_MAC_SUFFIX}": "192.0.2.10"}
         if oid == OID_CLIENT_UPTIME:

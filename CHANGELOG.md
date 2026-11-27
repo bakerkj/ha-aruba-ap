@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.26](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.25...v0.0.26) (2026-11-27)
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#222](https://github.com/bakerkj/ha-aruba-ap/issues/222)) ([3dea53d](https://github.com/bakerkj/ha-aruba-ap/commit/3dea53d3d4d623ccfff5b5d16ee1493ea78820f5))
+
 ## [0.0.25](https://github.com/bakerkj/ha-aruba-ap/compare/v0.0.24...v0.0.25) (2026-11-24)
 
 
